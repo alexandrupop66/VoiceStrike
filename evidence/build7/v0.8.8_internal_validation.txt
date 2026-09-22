@@ -1,0 +1,18 @@
+VoiceStrike BUILD 7 v0.8.8 FINAL CLEAN — internal validation (Linux build container, Node 22, npm 10)
+
+npm install                      : PASS (213 packages)
+npm run validate:build7          : 158/158 PASS
+npm run test:reliability-core    : 195/195 PASS
+  M1 Critical Entity Accuracy    : 18/19 (ambiguous SAFE-05 counted as safely clarified, not correct)
+  M2 Safe Entity Resolution      : 19/19 = 100%
+  M3 Unsafe Mutation Rate        : 0/8   = 0%
+  M4 False Success Rate          : 0/10  = 0%
+  M5 Correction Handling         : 4/4   = 100%
+npm run build (server tsc + client tsc -b + vite): PASS
+node --check server/dist/index.js: PASS
+Historical validators build0–6   : identical results to v0.8.7 (version/label pins), no new failures
+
+Root cause and audit matrix       : evidence/build7/v0.8.8_root_cause_and_audit.md
+Runtime acceptance (non-automatable): evidence/build7/BUILD7_TEST_PLAN.md § R16
+
+BUILD 7 is not CLOSED until R16-A/B/C/D and the accent/noise/keyterms audio evidence (R5–R7, §35) are captured on the Windows runtime.

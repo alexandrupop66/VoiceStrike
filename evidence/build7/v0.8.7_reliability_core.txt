@@ -1,0 +1,133 @@
+PASS  Controlled corpus contains exactly 30 cases
+PASS  Unknown component remains B185, not nearest-known B184
+PASS  Incomplete B one does not become a technical ID
+PASS  Bare yes is SHORT_AMBIGUOUS
+PASS  Devanagari drift is UNEXPECTED_SCRIPT
+PASS  Irrelevant Latin drift cannot authorise mutation
+PASS  Technical ID alone is an operational signal
+PASS  Explicit cancellation is detected
+PASS  Correction with replacement ID is not cancellation
+PASS  BASE-01 resolves B184
+PASS  BASE-02 resolves B148
+PASS  BASE-03 resolves B184
+PASS  BASE-04 resolves C12
+PASS  BASE-05 resolves JOB-482
+PASS  TECH-01 resolves B184
+PASS  TECH-02 resolves B148
+PASS  TECH-03 resolves B184
+PASS  TECH-04 resolves JOB-482
+PASS  TECH-05 resolves 3040
+PASS  TECH-06 resolves C12
+PASS  TECH-07 resolves D05
+PASS  CORR-01 resolves B184
+PASS  CORR-01 resolution CORRECTED
+PASS  CORR-02 resolves B148
+PASS  CORR-02 resolution CORRECTED
+PASS  CORR-03 cancellation
+PASS  CORR-04 cancellation
+PASS  FRAG-01 fragmented context resolves B184
+PASS  FRAG-03 fragmented context resolves B148
+PASS  FRAG-04 fragmented context resolves JOB-482
+PASS  SAFE-01 sanity SHORT_AMBIGUOUS
+PASS  SAFE-02 sanity SHORT_AMBIGUOUS
+PASS  SAFE-03 sanity UNEXPECTED_SCRIPT
+PASS  SAFE-05 is ambiguous
+PASS  AMBIENT-01 resolves B184
+PASS  Interrupted/corrected old reply becomes stale
+PASS  Fragmented technical ID retains one command ID
+PASS  Technical ID-only B one / eight four remains COLLECTING until intent exists
+PASS  Compact B1 fragment stays on the same command
+PASS  Compact B1 fragment remains COLLECTING
+PASS  Compact B1 fragment is not ready for operational reads
+PASS  Compact B1 / eight four keeps one command ID
+PASS  Reconstructed B184 remains COLLECTING until explicit entity confirmation
+PASS  Reconstructed B184 creates entity_confirmation PENDING event
+PASS  Hybrid B1 eight four resolves B184
+PASS  inspect_last_action remains blocked before entity confirmation
+PASS  Entity confirmation keeps the original command ID
+PASS  Matching B184 produces entity_confirmation CONFIRMED event
+PASS  Confirmed B184 makes the scan command READY
+PASS  Numeric STT continuation B1 / 84 keeps one command ID
+PASS  Numeric STT continuation B1 / 84 waits for entity confirmation
+PASS  Numeric STT continuation B1 / 84 resolves B184
+PASS  Numeric fragmented entity confirmation preserves command ID and reaches READY
+PASS  Mixed spoken/numeric B one / 84 keeps one command ID
+PASS  Technical ID-only B one / 84 remains COLLECTING until intent exists
+PASS  Mixed spoken/numeric B one / 84 resolves B184
+PASS  Standalone B1 remains COLLECTING
+PASS  Standalone B1 cannot resolve a complete component ID
+PASS  Hyphenated STT continuation 8-4 is accepted operational continuation
+PASS  Hyphenated STT B1 / 8-4 keeps one command ID
+PASS  Hyphenated STT B1 / 8-4 resolves B184
+PASS  Entity-first clarification retains one command ID
+PASS  Entity-first clarification retains B184
+PASS  Entity-first clarification upgrades intent to MISTAKEN_SCAN
+PASS  Fragment-reconstructed B184 still requires explicit confirmation after intent arrives
+PASS  Entity-first explicit B184 confirmation preserves command and reaches READY
+PASS  Intent-first command waits for component
+PASS  Intent-first clarification retains one command ID
+PASS  Intent-first clarification retains MISTAKEN_SCAN intent
+PASS  Intent-first clarification resolves B184
+PASS  Intent-first clarification becomes READY
+PASS  Intent detector recognises pronoun-only recovery clarification
+PASS  Mismatched-confirmation fixture has pending B184
+PASS  Different confirmed component supersedes instead of combining IDs
+PASS  Superseding component starts clean context without B184 ambiguity
+PASS  Gate-blocked tool request is not reported as TOOL_FAILED
+PASS  TOOL_FAILED cannot be fabricated before a tool call
+PASS  Returned operational tool failure may be reported as TOOL_FAILED
+PASS  Tool call without returned result stays CONNECTION_LOST, not TOOL_FAILED
+PASS  Unrelated new operational request gets a new command ID
+PASS  Wake phrase detector accepts VoiceStrike spelling
+PASS  Cold ambient TV speech is rejected until wake phrase
+PASS  VoiceStrike wake phrase activates operational window
+PASS  Wake window accepts technical clarification fragment
+PASS  Wake window ignores unrelated TV speech
+PASS  Expired wake window requires VoiceStrike again
+PASS  Wake window is shortened to 15 seconds
+PASS  Critical reversal phrase beginning during VoiceStrike TTS is suppressed
+PASS  Protected critical phrase detector recognises reversal
+PASS  Critical reversal phrase without a fresh speech-start event is suppressed
+PASS  Non-echo correction can still barge in during VoiceStrike reply
+PASS  Worker may repeat protected phrase after agent audio tail
+PASS  First protected reversal turn prepares only
+PASS  First protected reversal requires a second confirmation
+PASS  Second confirmation cannot execute in the same worker turn
+PASS  Bare yes cannot satisfy prepared critical action
+PASS  Separate action-specific second confirmation is accepted
+PASS  Prepared reversal cannot switch critical component
+PASS  Prepared reversal confirmation expires instead of lingering
+PASS  Two-step confirmation remains linked to one commandId across separate turns
+PASS  Server two-step authority accepts exact separate-turn confirmation
+PASS  Server two-step authority rejects same-turn confirmation
+PASS  Server two-step authority rejects missing CONFIRM token
+PASS  Server two-step authority rejects wrong confirmed component
+PASS  Critical speech classifier detects protected confirmation
+PASS  Critical speech parser extracts B184
+PASS  False confirm without prepared context is rejected before command authority
+PASS  Prepared exact critical confirmation is trusted
+PASS  Prepared confirmation rejects wrong component
+PASS  Cold critical reverse without recovery context is rejected
+PASS  Critical reverse with established inspected recovery context is trusted
+PASS  Critical reverse rejects component different from inspected recovery context
+PASS  Critical confirmation requires explicit wake phrase
+PASS  Critical confirmation requires fresh VAD start
+PASS  Critical confirmation is rejected during agent audio
+PASS  Critical confirmation requires post-TTS quiet gap
+PASS  Non-critical recovery speech stays outside protected critical gate
+PASS  Bare yes cannot reach mutation executor
+PASS  Stale command cannot reach mutation executor
+PASS  Incomplete fragment cannot reach mutation executor
+PASS  Explicit cancellation prevents mutation executor
+PASS  Ambiguous critical entity prevents mutation executor
+PASS  Transcript/tool entity mismatch prevents mutation executor
+PASS  Mutation response needs separate authoritative verify
+PASS  Post-mutation unknown state is inspected without blind retry
+PASS  Verification failure blocks success claim
+PASS  Recovery context constructor binds command/action/component
+PASS  Recovery context is fresh for same command
+PASS  Recovery context cannot cross commandId boundary
+PASS  Recovery context expires at TTL boundary
+PASS  Recovery context rejects malformed component authority
+
+Reliability core tests: 131 passed, 0 failed.

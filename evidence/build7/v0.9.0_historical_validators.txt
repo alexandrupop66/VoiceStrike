@@ -1,0 +1,28 @@
+BUILD 0-6 historical validators (v0.9.0)
+--- validate-build0 ---
+--- validate-build1 ---
+PASS .env.example
+PASS .env ignored
+--- validate-build2 ---
+FAIL  Health reports build 2
+--- validate-build3 ---
+BUILD 3 structural validation passed.
+--- validate-build4 ---
+FAIL  version is 0.5.0
+FAIL  health reports build 4
+FAIL  server log says Build 4
+FAIL  UI is labeled BUILD 4
+BUILD 4 structural validation failed.
+--- validate-build5 ---
+FAIL  package version 0.6.0
+FAIL  health reports build 5
+FAIL  server log says Build 5
+BUILD 5 structural validation failed: 3 check(s).
+--- validate-build6 ---
+FAIL  Version is 0.7.0
+FAIL  Health reports build 6
+FAIL  Server log reports Build 6
+FAIL  Bare confirmation is deterministically rejected
+FAIL  Confirmation comes from latest user transcript
+FAIL  Client captures final user transcript
+FAIL  Build tag is BUILD 6

@@ -1,0 +1,14 @@
+VoiceStrike BUILD 7 v0.8.9 CLEAN — internal validation
+
+Root cause: sequential workflow command contamination after a completed recovery in a long-lived Worker voice session.
+Fix: READY-command merge allow-list restricted to intentional recovery progression only.
+Safety gates relaxed: NO.
+Server mutation logic changed: NO.
+TurnAuthority v0.8.8 logic changed: NO.
+
+Structural validation: 159/159 PASS
+Reliability core:      200/200 PASS
+Changed reliability module TypeScript compile: PASS
+Full npm production build: deferred to Windows Safe Launcher (clean source package does not vendor dependencies).
+
+Required Windows runtime regression: BUILD7_TEST_PLAN.md § R17.

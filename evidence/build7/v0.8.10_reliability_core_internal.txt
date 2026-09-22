@@ -1,0 +1,212 @@
+VoiceStrike BUILD 7 v0.8.10 CLEAN — internal reliability-core runtime
+Method: local TypeScript transpile of the unchanged reliability modules and test runner because package installation is unavailable in this sandbox. Windows Safe Launcher reruns the official npm/tsx suite before start.
+
+PASS  Controlled corpus contains exactly 30 cases
+PASS  Unknown component remains B185, not nearest-known B184
+PASS  Incomplete B one does not become a technical ID
+PASS  Bare yes is SHORT_AMBIGUOUS
+PASS  Devanagari drift is UNEXPECTED_SCRIPT
+PASS  Irrelevant Latin drift cannot authorise mutation
+PASS  Technical ID alone is an operational signal
+PASS  Explicit cancellation is detected
+PASS  Correction with replacement ID is not cancellation
+PASS  BASE-01 resolves B184
+PASS  BASE-02 resolves B148
+PASS  BASE-03 resolves B184
+PASS  BASE-04 resolves C12
+PASS  BASE-05 resolves JOB-482
+PASS  TECH-01 resolves B184
+PASS  TECH-02 resolves B148
+PASS  TECH-03 resolves B184
+PASS  TECH-04 resolves JOB-482
+PASS  TECH-05 resolves 3040
+PASS  TECH-06 resolves C12
+PASS  TECH-07 resolves D05
+PASS  CORR-01 resolves B184
+PASS  CORR-01 resolution CORRECTED
+PASS  CORR-02 resolves B148
+PASS  CORR-02 resolution CORRECTED
+PASS  CORR-03 cancellation
+PASS  CORR-04 cancellation
+PASS  FRAG-01 fragmented context resolves B184
+PASS  FRAG-03 fragmented context resolves B148
+PASS  FRAG-04 fragmented context resolves JOB-482
+PASS  SAFE-01 sanity SHORT_AMBIGUOUS
+PASS  SAFE-02 sanity SHORT_AMBIGUOUS
+PASS  SAFE-03 sanity UNEXPECTED_SCRIPT
+PASS  SAFE-05 is ambiguous
+PASS  AMBIENT-01 resolves B184
+PASS  Interrupted/corrected old reply becomes stale
+PASS  Sequential recovery keeps one command through protected confirmation
+PASS  New wrong-component intent after recovery starts a fresh commandId
+PASS  Wrong-component B184 clarification stays on the fresh command
+PASS  Wrong-component intent + B184 becomes READY after prior recovery workflow
+PASS  Fresh wrong-component context does not contain stale reverse intent
+PASS  Fragmented technical ID retains one command ID
+PASS  Technical ID-only B one / eight four remains COLLECTING until intent exists
+PASS  Compact B1 fragment stays on the same command
+PASS  Compact B1 fragment remains COLLECTING
+PASS  Compact B1 fragment is not ready for operational reads
+PASS  Compact B1 / eight four keeps one command ID
+PASS  Reconstructed B184 remains COLLECTING until explicit entity confirmation
+PASS  Reconstructed B184 creates entity_confirmation PENDING event
+PASS  Hybrid B1 eight four resolves B184
+PASS  inspect_last_action remains blocked before entity confirmation
+PASS  Entity confirmation keeps the original command ID
+PASS  Matching B184 produces entity_confirmation CONFIRMED event
+PASS  Confirmed B184 makes the scan command READY
+PASS  Numeric STT continuation B1 / 84 keeps one command ID
+PASS  Numeric STT continuation B1 / 84 waits for entity confirmation
+PASS  Numeric STT continuation B1 / 84 resolves B184
+PASS  Numeric fragmented entity confirmation preserves command ID and reaches READY
+PASS  Mixed spoken/numeric B one / 84 keeps one command ID
+PASS  Technical ID-only B one / 84 remains COLLECTING until intent exists
+PASS  Mixed spoken/numeric B one / 84 resolves B184
+PASS  Standalone B1 remains COLLECTING
+PASS  Standalone B1 cannot resolve a complete component ID
+PASS  Hyphenated STT continuation 8-4 is accepted operational continuation
+PASS  Hyphenated STT B1 / 8-4 keeps one command ID
+PASS  Hyphenated STT B1 / 8-4 resolves B184
+PASS  Entity-first clarification retains one command ID
+PASS  Entity-first clarification retains B184
+PASS  Entity-first clarification upgrades intent to MISTAKEN_SCAN
+PASS  Fragment-reconstructed B184 still requires explicit confirmation after intent arrives
+PASS  Entity-first explicit B184 confirmation preserves command and reaches READY
+PASS  Intent-first command waits for component
+PASS  Intent-first clarification retains one command ID
+PASS  Intent-first clarification retains MISTAKEN_SCAN intent
+PASS  Intent-first clarification resolves B184
+PASS  Intent-first clarification becomes READY
+PASS  Intent detector recognises pronoun-only recovery clarification
+PASS  Mismatched-confirmation fixture has pending B184
+PASS  Different confirmed component supersedes instead of combining IDs
+PASS  Superseding component starts clean context without B184 ambiguity
+PASS  Gate-blocked tool request is not reported as TOOL_FAILED
+PASS  TOOL_FAILED cannot be fabricated before a tool call
+PASS  Returned operational tool failure may be reported as TOOL_FAILED
+PASS  Tool call without returned result stays CONNECTION_LOST, not TOOL_FAILED
+PASS  Unrelated new operational request gets a new command ID
+PASS  Wake phrase detector accepts VoiceStrike spelling
+PASS  Cold ambient TV speech is rejected until wake phrase
+PASS  VoiceStrike wake phrase activates operational window
+PASS  Wake window accepts technical clarification fragment
+PASS  Wake window ignores unrelated TV speech
+PASS  Expired wake window requires VoiceStrike again
+PASS  Wake window is shortened to 15 seconds
+PASS  Critical reversal phrase beginning during VoiceStrike TTS is suppressed
+PASS  Protected critical phrase detector recognises reversal
+PASS  Critical reversal phrase without a fresh speech-start event is suppressed
+PASS  Non-echo correction can still barge in during VoiceStrike reply
+PASS  Worker may repeat protected phrase after agent audio tail
+PASS  First protected reversal turn prepares only
+PASS  First protected reversal requires a second confirmation
+PASS  Second confirmation cannot execute in the same worker turn
+PASS  Bare yes cannot satisfy prepared critical action
+PASS  Separate action-specific second confirmation is accepted
+PASS  Prepared reversal cannot switch critical component
+PASS  Prepared reversal confirmation expires instead of lingering
+PASS  Two-step confirmation remains linked to one commandId across separate turns
+PASS  Server two-step authority accepts exact separate-turn confirmation
+PASS  Server two-step authority rejects same-turn confirmation
+PASS  Server two-step authority rejects missing CONFIRM token
+PASS  Server two-step authority rejects wrong confirmed component
+PASS  Critical speech classifier detects protected confirmation
+PASS  Critical speech parser extracts B184
+PASS  False confirm without prepared context is rejected before command authority
+PASS  Prepared exact critical confirmation is trusted
+PASS  Prepared confirmation rejects wrong component
+PASS  Cold critical reverse without recovery context is rejected
+PASS  Critical reverse with established inspected recovery context is trusted
+PASS  Critical reverse rejects component different from inspected recovery context
+PASS  Critical confirmation requires explicit wake phrase
+PASS  Critical confirmation requires fresh VAD start
+PASS  Critical confirmation is rejected during agent audio
+PASS  Critical confirmation requires post-TTS quiet gap
+PASS  Non-critical recovery speech stays outside protected critical gate
+PASS  Bare yes cannot reach mutation executor
+PASS  Stale command cannot reach mutation executor
+PASS  Incomplete fragment cannot reach mutation executor
+PASS  Explicit cancellation prevents mutation executor
+PASS  Ambiguous critical entity prevents mutation executor
+PASS  Transcript/tool entity mismatch prevents mutation executor
+PASS  Mutation response needs separate authoritative verify
+PASS  Post-mutation unknown state is inspected without blind retry
+PASS  Verification failure blocks success claim
+PASS  Recovery context constructor binds command/action/component
+PASS  Recovery context is fresh for same command
+PASS  Recovery context cannot cross commandId boundary
+PASS  Recovery context expires at TTL boundary
+PASS  Recovery context rejects malformed component authority
+PASS  A: mistaken-scan turn is accepted
+PASS  A: prepare turn is accepted
+PASS  A: prepare turn produces PREPARED with mutation 0
+PASS  A1 confirmation turn accepted
+PASS  A1 TTS echo transcript is rejected
+PASS  A1 untrusted critical transcript is rejected
+PASS  A1 ambient transcript is rejected
+PASS  A1 wake window has expired before the delayed tool.call
+PASS  A1 rejected speech did not replace or revoke the accepted authority
+PASS  A1 later ambient/echo speech cannot revoke valid prior turn authority
+PASS  A1 final protected confirmation => exactly one mutation
+PASS  A1 exactly one independent verification after mutation
+PASS  A1 outcome is VERIFIED_SUCCESS with verified === true
+PASS  A1 repeated tool.call under the same turn authority cannot mutate again
+PASS  A: mistaken-scan turn is accepted
+PASS  A: prepare turn is accepted
+PASS  A: prepare turn produces PREPARED with mutation 0
+PASS  A2 wrong commandId => mutation 0
+PASS  A2 authority cannot transfer to another command
+PASS  A: mistaken-scan turn is accepted
+PASS  A: prepare turn is accepted
+PASS  A: prepare turn produces PREPARED with mutation 0
+PASS  A3 wrong-component confirmation is rejected before command acceptance
+PASS  A3 wrong component => mutation 0
+PASS  A: mistaken-scan turn is accepted
+PASS  A: prepare turn is accepted
+PASS  A: prepare turn produces PREPARED with mutation 0
+PASS  A4 correction is accepted as a new command
+PASS  A4 tool call from the interrupted reply stays bound to the invalidated command
+PASS  A4 stale authority => mutation 0
+PASS  A: mistaken-scan turn is accepted
+PASS  A: prepare turn is accepted
+PASS  A: prepare turn produces PREPARED with mutation 0
+PASS  A5 reconnect => mutation 0
+PASS  A: mistaken-scan turn is accepted
+PASS  A: prepare turn is accepted
+PASS  A: prepare turn produces PREPARED with mutation 0
+PASS  A6 cancellation turn is accepted as speech
+PASS  A6 cancelled confirmation => mutation 0
+PASS  A: mistaken-scan turn is accepted
+PASS  A: prepare turn is accepted
+PASS  A: prepare turn produces PREPARED with mutation 0
+PASS  A7 confirmation without wake phrase is rejected
+PASS  A7 no wake authority => mutation 0
+PASS  A: mistaken-scan turn is accepted
+PASS  A: prepare turn is accepted
+PASS  A: prepare turn produces PREPARED with mutation 0
+PASS  A8 prepare-only authority cannot confirm: repeated prepare turn stays non-mutating
+PASS  A9 TurnAuthority is immutable
+PASS  A9 authority has no revoke-by-speech API
+PASS  A9 authority resolves for its own command
+PASS  A9 authority rejects another command
+PASS  A9 authority rejects another session
+PASS  A9 authority rejects invalidated command
+PASS  A9 authority expires after TTL
+PASS  A9 non-wake authority cannot authorise tools
+PASS  A9 non-critical turn cannot authorise the protected reverse mutation
+PASS  A9 consumed mutation cannot be re-attempted under the same authority
+PASS  A9 consumption is per mutation tool, so a second distinct mutation in the same turn (E1 report+status) stays possible
+PASS  A9 reset clears authority
+
+BUILD 7 metrics (deterministic Layer A):
+  M1 Critical Entity Accuracy        = 18/19 (94.7%) — ambiguous cases are counted as safely clarified in M2, not as correct here
+  M2 Safe Entity Resolution          = 19/19 (100.0%)  target 100%
+  M3 Unsafe Mutation Rate            = 0/8 (0.0%)  target 0%
+  M4 False Success Rate              = 0/10 (0.0%)  target 0%
+  M5 Correction Handling             = 4/4 (100.0%)  target 100%
+PASS  M2 Critical Entity Safe Resolution = 100%
+PASS  M3 Unsafe Mutation Rate = 0%
+PASS  M4 False Success Rate = 0%
+PASS  M5 Correction Handling = 100%
+
+Reliability core tests: 200 passed, 0 failed.

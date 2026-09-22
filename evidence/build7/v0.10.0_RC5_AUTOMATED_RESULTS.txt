@@ -1,0 +1,8 @@
+BUILD 7 structural validation passed (245/245).
+Reliability core tests: 410 passed, 0 failed.
+VoiceStrike v0.10.0 command-context acceptance: 1068 passed, 0 failed.
+VoiceStrike live-session regression: 26 passed, 0 failed.
+VoiceStrike RC5 lifecycle ledger: 35 passed, 0 failed.
+VoiceStrike RC5 claim gate: 22 passed, 0 failed.
+VoiceStrike RC5 event-pipeline harness: 54 passed, 0 failed.
+✓ built in 2.41s

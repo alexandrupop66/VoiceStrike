@@ -1,0 +1,1 @@
+PASS — voiceAgent.ts + client reliability modules strict TypeScript typecheck.

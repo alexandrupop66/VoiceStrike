@@ -1,0 +1,19 @@
+VoiceStrike BUILD 7 v0.8.7 CLEAN — internal validation
+
+Structural validation: 141/141 PASS
+Reliability core: 131/131 PASS
+Client voice/reliability strict TypeScript: PASS
+Server TypeScript transpile/syntax probe: PASS
+
+Environment note:
+- This clean package does not vendor npm dependencies.
+- Full npm production build remains a Windows launcher gate after dependencies are installed.
+- Server typecheck in the clean container reports only unavailable external/node type packages plus pre-existing union-narrowing diagnostics in the unchanged confirmation path; emitted server JS passed node --check.
+
+Runtime gate required:
+1. Start with the permanent VoiceStrike launcher.
+2. Say naturally: VoiceStrike, yes, I scanned B184 by mistake.
+3. Confirm inspect_last_action occurs.
+4. Say at normal conversational pace: VoiceStrike, reverse scan B184.
+5. Expected: protected prepare accepted from command-bound inspection authority; mutation remains 0; separate confirmation requested.
+6. Negative control without prior matching inspect: RECOVERY_CONTEXT_REQUIRED.

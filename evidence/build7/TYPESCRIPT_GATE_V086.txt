@@ -1,0 +1,6 @@
+VoiceStrike BUILD 7 v0.8.6 changed-module TypeScript gate
+
+Command:
+tsc --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --lib ES2022,DOM,DOM.Iterable --strict --skipLibCheck client/src/voice/voiceAgent.ts client/src/reliability/*.ts
+
+RESULT: PASS

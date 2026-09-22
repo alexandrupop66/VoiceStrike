@@ -1,0 +1,189 @@
+PASS  BUILD7_STATUS exists
+PASS  Build 7 runtime test plan exists
+PASS  Build 1 reliability findings preserved
+PASS  Controlled reliability corpus exists
+PASS  Controlled reliability corpus has at least 30 cases
+PASS  Corpus covers every BUILD 7.8 audio category
+PASS  Version is 0.9.1
+PASS  Health reports build 7
+PASS  Server log reports Build 7
+PASS  Client build tag is BUILD 7
+PASS  Worker and Supervisor views remain mounted across view switches
+PASS  Worker view is no longer conditionally mounted by active view
+PASS  Persistent Worker view still owns the single VoicePanel instance
+PASS  v0.8.7 keeps adaptive Voice Agent endpointing
+PASS  Recovery context is command-bound in client
+PASS  Successful inspect binds recovery context to commandId
+PASS  Critical prepare can restore only prior server-audited inspection
+PASS  Server exposes read-only recovery-context authority endpoint
+PASS  Inspect audit records reliability command binding
+PASS  Turn-bound authority module exists
+PASS  TurnAuthority carries session/turn/command/transcript/wake/critical binding
+PASS  TurnAuthority is frozen at grant time
+PASS  Authority registry exposes no revoke-by-speech API
+PASS  Authority resolution refuses other command/session/invalidated/expired
+PASS  Authority consumption makes a mutation single-attempt per turn
+PASS  Mutable session flag lastInputAuthorised is gone
+PASS  Accepted turns grant immutable authority
+PASS  Tool calls resolve turn authority instead of live session state
+PASS  Rejected speech paths leave existing authority untouched
+PASS  Accepted turn id is bound only after all speech gates accept
+PASS  Reliability headers derive from accepted-turn authority, not live wake window
+PASS  Protected confirmation is assessed against authority-bound transcript/turn
+PASS  Reconnect/disconnect/reset clear turn authority through one epoch owner
+PASS  Tool calls stay bound to the reply command after invalidation
+PASS  READY commands do not absorb unrelated later intents
+PASS  Mandatory delayed tool.call regression exists
+PASS  Inverse regressions exist (wrong commandId, wrong component, stale, reconnect, cancelled, no wake)
+PASS  Critical entity resolver exists
+PASS  Technical ID normaliser exists
+PASS  Spoken B/bee variants supported
+PASS  Unknown IDs are not nearest-known mapped
+PASS  Correction resolver exists
+PASS  Multiple candidates can become AMBIGUOUS
+PASS  Transcript sanity gate exists in client
+PASS  Bare yes/ok/da are explicitly ambiguous
+PASS  Unexpected script detection exists
+PASS  Mutation sanity gate rejects non-operational Latin drift
+PASS  Server also enforces mutation transcript sanity
+PASS  Prompt states speech is input not authority
+PASS  Prompt states speech content does not prove speaker authority
+PASS  Pending command registry exists
+PASS  Pending commands support COLLECTING/READY/INVALIDATED
+PASS  Incomplete commands are blocked before mutation
+PASS  Tool calls are tied to commandId
+PASS  Stale tool calls are rejected
+PASS  Explicit cancellation is blocked centrally
+PASS  Ambiguous critical entity is blocked centrally
+PASS  Transcript/tool entity mismatch is blocked centrally
+PASS  Corrections can invalidate old reply authority
+PASS  Compact partial IDs remain incomplete
+PASS  Hybrid compact/spoken IDs are supported
+PASS  Digits-only STT continuation is supported
+PASS  Mixed technical IDs accept compact numeric STT tokens
+PASS  Agent prompt explains B1 + 84 / 8-4 continuation
+PASS  Read readiness is decided by the central tool policy
+PASS  Mutations still require a READY command
+PASS  Tool classes separate read-only bootstrap from mutation
+PASS  Authoritative recovery inspection still requires a READY command
+PASS  Read-only bootstrap cannot grant mutation authority
+PASS  Entity-first and intent-first clarification retention exists
+PASS  Fragment-reconstructed component requires explicit entity confirmation
+PASS  Entity confirmation stays on the same command when the ID matches
+PASS  Different entity confirmation supersedes instead of combining IDs
+PASS  Entity confirmation is an explicit reliability event
+PASS  Pending entity confirmation blocks read tools before inspect
+PASS  Pronoun-only mistaken-scan clarification can retain intent
+PASS  Hyphenated numeric STT continuation is supported
+PASS  Ambient speech gate exists
+PASS  Wake phrase is required before operational conversation
+PASS  Unrelated ambient speech does not extend wake window
+PASS  Mutable session suppression flag is gone
+PASS  Replies are bound to the accepted turn that caused them
+PASS  Orphan replies are never audible and never authoritative turns
+PASS  Rejected speech cannot open or close a reply-authorised turn
+PASS  Tool work keeps the accepted turn open across the tool round-trip
+PASS  Mutation requests carry wake authority
+PASS  Reverse confirmation requires wake phrase in latest worker turn
+PASS  Microphone AGC is disabled to avoid boosting background speech
+PASS  Browser noise suppression and echo cancellation remain enabled
+PASS  Voice isolation is requested when browser supports it
+PASS  Local RMS noise gate exists
+PASS  VAD threshold is raised for ambient robustness
+PASS  Wake clarification window is shortened from 30s
+PASS  Solicited clarification window exists and is bounded
+PASS  Clarification window is bound to the active command
+PASS  Clarification window accepts only clarification continuations
+PASS  Accepted clarification consumes its one-shot window
+PASS  Agent reply completion opens clarification only for COLLECTING command
+PASS  Ambient assessment receives current command binding
+PASS  Protected critical trust still runs before clarification wake handling
+PASS  Locally blocked tools never claim a tool/system failure
+PASS  Claim grounding is attached to every tool result
+PASS  Claim grounding requires an attempted call before a failure claim
+PASS  Claim grounding requires independent verification before a state-change claim
+PASS  Operational stage vocabulary is explicit
+PASS  E1 solicited clarification regression is automated
+PASS  Duplex echo guard exists
+PASS  Critical reversal phrases are blocked when speech begins during agent audio
+PASS  Critical reversal requires a fresh VAD speech-start event
+PASS  Echo-like transcript overlap is suppressed only inside agent audio window
+PASS  Voice client tracks speech start for duplex authority
+PASS  Echo suppression is silent before command acceptance
+PASS  Critical Speech Trust Gate exists
+PASS  Critical Trust Gate requires fresh VAD
+PASS  Critical Trust Gate requires post-TTS quiet gap
+PASS  Critical Trust Gate requires explicit wake phrase
+PASS  False critical confirm requires a prepared confirmation
+PASS  Prepared confirmation component must match trusted speech
+PASS  Cold reverse command requires established recovery context
+PASS  Authoritative recovery speech context comes only from inspect_last_action
+PASS  Recovery speech context expires with the server inspection window
+PASS  Protected reverse component must match inspected recovery component
+PASS  Rejected critical speech is blocked before command registry acceptance
+PASS  Rejected critical speech produces a dead conversational turn
+PASS  Rejected speech removes any surfaced partial transcript
+PASS  Critical trust score is telemetry only, not mutation authority
+PASS  Dangerous full mutation phrases are not AssemblyAI keyterms
+PASS  Project false-transcript rule is persisted
+PASS  Local Reliability DEV panel exists
+PASS  Reliability DEV telemetry remains separate from operational audit
+PASS  Truthful tool reporting helper exists
+PASS  TOOL_FAILED requires an attempted returned tool failure
+PASS  Gate refusals are not generically rewritten as TOOL_FAILED
+PASS  Not-ready read response states no operational tool failed or was called
+PASS  Critical confirmation gate exists
+PASS  First protected reversal only prepares action
+PASS  Second confirmation must be a separate worker turn
+PASS  Second confirmation is bound to command/action/component
+PASS  Second confirmation requires VoiceStrike + confirm + reverse + scan + component
+PASS  Voice tool handler stages reversal before Safe Action Executor
+PASS  Confirmed reversal carries deterministic prepared-authority headers
+PASS  Server prepared-confirmation validator exists
+PASS  Server independently requires prepared two-step authority
+PASS  Server requires prepared and confirmation turns to differ
+PASS  Recovery audit records two-step authority
+PASS  Reliability runner uses ESM-safe .mts
+PASS  Client tsconfig avoids invalid allowImportingTsExtensions build flag
+PASS  Safe Action Executor exists
+PASS  Current mutation tools use common executor
+PASS  Mutation success requires independent verification
+PASS  Success claim gate requires VERIFIED_SUCCESS + verified true
+PASS  Reverse verification performs independent inspect
+PASS  Wrong-component exception gets authoritative state verification
+PASS  Job BLOCKED mutation gets authoritative state verification
+PASS  Inventory discrepancy gets authoritative verification
+PASS  No blind mutation retry path
+PASS  Reliability telemetry ring exists
+PASS  Reliability telemetry API exists
+PASS  Ambiguous reliability.tool_called event is gone
+PASS  Tool lifecycle telemetry is unambiguous
+PASS  Latency-stage telemetry events exist
+PASS  Telemetry carries correlation identifiers
+PASS  Audit and telemetry remain separate modules
+PASS  Failure injection module exists
+PASS  Failure injection disabled unless explicit non-production flag
+PASS  Failure injection API exists
+PASS  REVERSE_AFTER_MUTATION fault exists
+PASS  Post-mutation fault returns unknown action state
+PASS  Verification failure points exist
+PASS  Verification faults apply to state and last-action reads
+PASS  Connection loss records reliability event
+PASS  Unknown connection state requires recovery
+PASS  Reconnect runs authoritative recovery before mutations
+PASS  Recovery refreshes state and last action
+PASS  Recovery explicitly avoids mutation replay
+PASS  Keyterms A/B switch exists
+PASS  Job-specific keyterms preserved
+PASS  BUILD 6 seeded reversible B184 scan preserved
+PASS  inspect_last_action endpoint preserved
+PASS  reverse_last_scan endpoint preserved
+PASS  Recovery still requires recent inspection
+PASS  Recovery still requires exact action ID
+PASS  Recovery still requires exact component
+PASS  Action-specific confirmation still enforced
+PASS  Mutation cannot self-declare verified
+PASS  Supervisor RECOVERY VERIFIED still requires post-reverse inspection
+PASS  Inspect → Reverse → Inspect evidence remains possible
+
+BUILD 7 structural validation passed (187/187).

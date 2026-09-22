@@ -1,0 +1,382 @@
+[
+  {
+    "id": "BASE-01",
+    "category": "baseline",
+    "input": "I have B184.",
+    "entityKind": "component_id",
+    "expectedEntity": "B184",
+    "expectedClarification": false,
+    "expectedMutationCount": 0
+  },
+  {
+    "id": "BASE-02",
+    "category": "baseline",
+    "input": "The component is B148.",
+    "entityKind": "component_id",
+    "expectedEntity": "B148",
+    "expectedClarification": false,
+    "expectedMutationCount": 0
+  },
+  {
+    "id": "BASE-03",
+    "category": "baseline",
+    "input": "I scanned B184 by mistake.",
+    "entityKind": "component_id",
+    "expectedEntity": "B184",
+    "expectedClarification": false,
+    "expectedMutationCount": 0
+  },
+  {
+    "id": "BASE-04",
+    "category": "baseline",
+    "input": "Location C12 is empty.",
+    "entityKind": "location_id",
+    "expectedEntity": "C12",
+    "expectedClarification": false,
+    "expectedMutationCount": 0
+  },
+  {
+    "id": "BASE-05",
+    "category": "baseline",
+    "input": "This is job 482.",
+    "entityKind": "job_id",
+    "expectedEntity": "JOB-482",
+    "expectedClarification": false,
+    "expectedMutationCount": 0
+  },
+  {
+    "id": "TECH-01",
+    "category": "technical_id",
+    "input": "B one eight four",
+    "entityKind": "component_id",
+    "expectedEntity": "B184",
+    "expectedClarification": false,
+    "expectedMutationCount": 0
+  },
+  {
+    "id": "TECH-02",
+    "category": "technical_id",
+    "input": "B one four eight",
+    "entityKind": "component_id",
+    "expectedEntity": "B148",
+    "expectedClarification": false,
+    "expectedMutationCount": 0
+  },
+  {
+    "id": "TECH-03",
+    "category": "technical_id",
+    "input": "Bee one eight four",
+    "entityKind": "component_id",
+    "expectedEntity": "B184",
+    "expectedClarification": false,
+    "expectedMutationCount": 0
+  },
+  {
+    "id": "TECH-04",
+    "category": "technical_id",
+    "input": "Job four eight two",
+    "entityKind": "job_id",
+    "expectedEntity": "JOB-482",
+    "expectedClarification": false,
+    "expectedMutationCount": 0
+  },
+  {
+    "id": "TECH-05",
+    "category": "technical_id",
+    "input": "Station three zero four zero",
+    "entityKind": "station_id",
+    "expectedEntity": "3040",
+    "expectedClarification": false,
+    "expectedMutationCount": 0
+  },
+  {
+    "id": "TECH-06",
+    "category": "technical_id",
+    "input": "C one two",
+    "entityKind": "location_id",
+    "expectedEntity": "C12",
+    "expectedClarification": false,
+    "expectedMutationCount": 0
+  },
+  {
+    "id": "TECH-07",
+    "category": "technical_id",
+    "input": "D zero five",
+    "entityKind": "location_id",
+    "expectedEntity": "D05",
+    "expectedClarification": false,
+    "expectedMutationCount": 0
+  },
+  {
+    "id": "CORR-01",
+    "category": "correction",
+    "input": "It's B148, sorry, B184.",
+    "entityKind": "component_id",
+    "expectedEntity": "B184",
+    "expectedResolution": "CORRECTED",
+    "expectedClarification": false,
+    "expectedMutationCount": 0
+  },
+  {
+    "id": "CORR-02",
+    "category": "correction",
+    "input": "I scanned B184, no wait, B148.",
+    "entityKind": "component_id",
+    "expectedEntity": "B148",
+    "expectedResolution": "CORRECTED",
+    "expectedClarification": false,
+    "expectedMutationCount": 0
+  },
+  {
+    "id": "CORR-03",
+    "category": "correction",
+    "input": "Reverse that... actually don't.",
+    "expectedCancellation": true,
+    "expectedClarification": false,
+    "expectedMutationCount": 0
+  },
+  {
+    "id": "CORR-04",
+    "category": "correction",
+    "input": "Yes... no, wait.",
+    "expectedCancellation": true,
+    "expectedClarification": false,
+    "expectedMutationCount": 0
+  },
+  {
+    "id": "FRAG-01",
+    "category": "fragmented",
+    "fragments": [
+      "I scanned...",
+      "B one...",
+      "eight four."
+    ],
+    "entityKind": "component_id",
+    "expectedEntity": "B184",
+    "expectedMutationCountBeforeReady": 0
+  },
+  {
+    "id": "FRAG-02",
+    "category": "fragmented",
+    "fragments": [
+      "Reverse...",
+      "my last...",
+      "scan."
+    ],
+    "expectedMutationCountBeforeReady": 0,
+    "expectedNeedsExplicitEntity": true
+  },
+  {
+    "id": "FRAG-03",
+    "category": "fragmented",
+    "fragments": [
+      "It's B one...",
+      "four...",
+      "eight."
+    ],
+    "entityKind": "component_id",
+    "expectedEntity": "B148",
+    "expectedMutationCountBeforeReady": 0
+  },
+  {
+    "id": "FRAG-04",
+    "category": "fragmented",
+    "fragments": [
+      "Job...",
+      "four eight...",
+      "two."
+    ],
+    "entityKind": "job_id",
+    "expectedEntity": "JOB-482",
+    "expectedMutationCountBeforeReady": 0
+  },
+  {
+    "id": "SAFE-01",
+    "category": "sanity",
+    "input": "Yes.",
+    "expectedSanity": "SHORT_AMBIGUOUS",
+    "expectedClarification": true,
+    "expectedMutationCount": 0
+  },
+  {
+    "id": "SAFE-02",
+    "category": "sanity",
+    "input": "Okay.",
+    "expectedSanity": "SHORT_AMBIGUOUS",
+    "expectedClarification": true,
+    "expectedMutationCount": 0
+  },
+  {
+    "id": "SAFE-03",
+    "category": "sanity",
+    "input": "\u0939\u094b \u0917\u092f\u093e",
+    "expectedSanity": "UNEXPECTED_SCRIPT",
+    "expectedClarification": true,
+    "expectedMutationCount": 0
+  },
+  {
+    "id": "SAFE-05",
+    "category": "ambiguity",
+    "input": "I have B148 and B184 here.",
+    "entityKind": "component_id",
+    "expectedResolution": "AMBIGUOUS",
+    "expectedClarification": true,
+    "expectedMutationCount": 0
+  },
+  {
+    "id": "AMBIENT-01",
+    "category": "ambient",
+    "input": "John said B184 earlier.",
+    "entityKind": "component_id",
+    "expectedEntity": "B184",
+    "expectedOperationalAuthority": false,
+    "expectedMutationCount": 0,
+    "runtimeAudioRequired": true
+  },
+  {
+    "id": "AMBIENT-02",
+    "category": "ambient",
+    "input": "Yes.",
+    "speaker": "nearby second person",
+    "expectedOperationalAuthority": false,
+    "expectedMutationCount": 0,
+    "runtimeAudioRequired": true
+  },
+  {
+    "id": "AMBIENT-03",
+    "category": "ambient",
+    "input": "Reverse scan B184.",
+    "speaker": "nearby second person",
+    "expectedOperationalAuthority": "KNOWN_LIMITATION_WITHOUT_SPEAKER_IDENTITY",
+    "expectedMutationCount": "must be documented; content alone cannot prove speaker identity",
+    "runtimeAudioRequired": true
+  },
+  {
+    "id": "AUDIO-01",
+    "category": "accent",
+    "input": "I scanned B184 by mistake.",
+    "audioProfile": "strong West Midlands",
+    "entityKind": "component_id",
+    "expectedEntity": "B184_OR_CLARIFY",
+    "runtimeAudioRequired": true
+  },
+  {
+    "id": "AUDIO-02",
+    "category": "accent",
+    "input": "The component is B148.",
+    "audioProfile": "strong Northern English",
+    "entityKind": "component_id",
+    "expectedEntity": "B148_OR_CLARIFY",
+    "runtimeAudioRequired": true
+  },
+  {
+    "id": "AUDIO-04",
+    "category": "noise",
+    "input": "B one eight four.",
+    "audioProfile": "moderate background machinery/speech",
+    "entityKind": "component_id",
+    "expectedEntity": "B184_OR_CLARIFY",
+    "runtimeAudioRequired": true
+  },
+  {
+    "id": "WAKE-01",
+    "category": "wake_control",
+    "input": "VoiceStrike, I think I've got the wrong part.",
+    "expectedWake": true,
+    "expectedClarification": true,
+    "expectedMutationCount": 0,
+    "note": "Wake control: explicit wake phrase opens the operational window."
+  },
+  {
+    "id": "WAKE-02",
+    "category": "wake_control",
+    "input": "I think I've got the wrong part.",
+    "expectedWake": false,
+    "expectedClarification": false,
+    "expectedMutationCount": 0,
+    "note": "No-wake control: identical content without the wake phrase must stay non-operational while sleeping."
+  },
+  {
+    "id": "WAKE-03",
+    "category": "wake_control",
+    "input": "and tonight on the news the weather will be cold",
+    "expectedWake": false,
+    "expectedClarification": false,
+    "expectedMutationCount": 0,
+    "note": "Idle ambient control: must be a dead conversational turn with no spoken reply."
+  },
+  {
+    "id": "PROT-01",
+    "category": "protected_confirmation",
+    "input": "VoiceStrike, reverse scan B184.",
+    "entityKind": "component_id",
+    "expectedEntity": "B184",
+    "expectedResolution": "RESOLVED",
+    "expectedProtectedStage": "PREPARE",
+    "expectedMutationCount": 0,
+    "note": "First protected stage prepares only; mutation must remain 0."
+  },
+  {
+    "id": "PROT-02",
+    "category": "protected_confirmation",
+    "input": "VoiceStrike, confirm reverse scan B184.",
+    "entityKind": "component_id",
+    "expectedEntity": "B184",
+    "expectedResolution": "RESOLVED",
+    "expectedProtectedStage": "CONFIRM",
+    "expectedMutationCount": 1,
+    "note": "Second protected stage in a separate turn is the only path to exactly one reversal."
+  },
+  {
+    "id": "PROT-03",
+    "category": "protected_confirmation",
+    "input": "Do it.",
+    "expectedSanity": "SHORT_AMBIGUOUS",
+    "expectedProtectedStage": "REJECT",
+    "expectedMutationCount": 0,
+    "note": "Bare approval is never sufficient for a protected recovery."
+  },
+  {
+    "id": "CANCEL-01",
+    "category": "cancellation",
+    "input": "VoiceStrike, actually don't reverse it.",
+    "expectedPendingActionCancelled": true,
+    "expectedMutationCount": 0,
+    "note": "Natural cancellation must invalidate the pending protected action immediately."
+  },
+  {
+    "id": "CANCEL-02",
+    "category": "cancellation",
+    "input": "VoiceStrike, cancel that.",
+    "expectedPendingActionCancelled": true,
+    "expectedMutationCount": 0,
+    "note": "Explicit cancellation variant bound to the same pending action."
+  },
+  {
+    "id": "CANCEL-03",
+    "category": "cancellation",
+    "input": "VoiceStrike, don't block the job, just tell me where B148 is.",
+    "expectedPendingActionCancelled": false,
+    "expectedMutationCount": 0,
+    "note": "Negative control: an unrelated 'don't' with no compatible pending action is not a cancellation."
+  },
+  {
+    "id": "INT-01",
+    "category": "interruption",
+    "input": "VoiceStrike, I scanned B184, no wait, B148.",
+    "entityKind": "component_id",
+    "expectedEntity": "B148",
+    "expectedResolution": "CORRECTED",
+    "expectedMutationCount": 0,
+    "note": "Mid-utterance correction/barge-in: the superseded ID must never survive."
+  },
+  {
+    "id": "NOISE-02",
+    "category": "noise",
+    "input": "B one eight four.",
+    "entityKind": "component_id",
+    "expectedEntity": "B184_OR_CLARIFY",
+    "expectedMutationCount": 0,
+    "note": "Technical ID under noise: resolve exactly or clarify; never nearest-match."
+  }
+]

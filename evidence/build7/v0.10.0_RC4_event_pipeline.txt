@@ -1,0 +1,33 @@
+
+> voicestrike@0.10.0 test:event-pipeline
+> npm exec -w server -- tsx ../scripts/test-event-pipeline-rc4.mts
+
+PASS  P1 PREPARE window opened although TV speech began during the instruction prompt
+PASS  P1 legit PREPARE speech is accepted (no protected-window rejection)
+PASS  P1 PREPARE tool.call is authorised and reaches PREPARED (SECOND_CONFIRMATION_REQUIRED), mutation 0
+PASS  P1 CONFIRM executes exactly one reversal
+PASS  P1 CONFIRM result is VERIFIED_SUCCESS
+PASS  P1 authoritative state is REVERSED
+PASS  P1 no CRITICAL_SPEECH_NOT_TRUSTED / COMMAND_MISMATCH on legitimate turns
+PASS  P2 early protected speech is rejected locally (duplex tail or protected quiet gap)
+PASS  P2 provider reply to the rejected transcript is an inaudible orphan
+PASS  P2 its reverse_last_scan has NO owner (not the inspect command) and never reaches an endpoint
+PASS  P2 repeated PREPARE after the pause is accepted and reaches PREPARED
+PASS  P2 exactly one reversal after the recovered sequence
+PASS  P3 tool.result is handed over after the in-flight tool completes
+PASS  P3 the continuation is bound as TOOL_CONTINUATION (not orphan)
+PASS  P3 continuation opens the PREPARE window
+PASS  P4 result is sent although a TV transcript delta followed reply.done
+PASS  P4 handoff dwell is recorded
+PASS  P5 result is held while a new user turn is in flight
+PASS  P5 result is sent at the next reply.done
+PASS  P6 unattributable tool.call is refused with no owner (never the old command)
+PASS  P6 the new turn's own reply tool is authorised
+PASS  P7 E2 deterministic chain completed inside the tool round-trip
+PASS  P7 E2 continuation is bound to the E2 command
+PASS  P7 truthful E2 claim passes the claim gate (no false failure)
+PASS  P8 cancel leaves mutation count 0 and state ACTIVE
+PASS  P8 fresh PREPARE after cancel reaches PREPARED
+PASS  P8 fresh cycle after cancel performs exactly one reversal
+
+VoiceStrike RC4 event-pipeline harness: 27 passed, 0 failed.

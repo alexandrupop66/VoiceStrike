@@ -1,0 +1,2 @@
+PASS  client voice/reliability TypeScript compile (global tsc, ES2022/DOM)
+TSC exit code: 0

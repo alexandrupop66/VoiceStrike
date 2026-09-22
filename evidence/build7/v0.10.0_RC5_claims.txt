@@ -1,0 +1,28 @@
+
+> voicestrike@0.10.0 test:claims
+> npm exec -w server -- tsx ../scripts/test-claims-rc5.mts
+
+PASS  normalise "B one four eight" -> B148
+PASS  normalise "bee one eight four" -> B184
+PASS  normalise "B 148" -> B148
+PASS  normalise "B148" -> B148
+PASS  normalise "B one forty eight" -> B148
+PASS  normalise "D zero five" -> D05
+PASS  normalise "D oh five" -> D05
+PASS  normalise "C twelve" -> C12
+PASS  normalise "C one two" -> C12
+PASS  normalise "location D nine nine" -> location D99
+PASS  an article with one digit word is not an ID ("a one-time check")
+PASS  a count after a spelled location stays a quantity ("D zero five four units")
+PASS  a numeric count after a compact location stays a quantity ("D05 4 units")
+PASS  job/station identifiers are untouched
+PASS  masking removes every ID digit
+PASS  LIVE E2 sentence with spelled component is allowed (quantity = 4 only)
+PASS  spelled component and spelled location are allowed
+PASS  logged claim with spelled location allowed
+PASS  wrong quantity with spelled location is rejected
+PASS  spelled unauthorised location is rejected (former false negative)
+PASS  compact unauthorised location still rejected
+PASS  no discrepancy evidence => logged claim rejected
+
+VoiceStrike RC5 claim gate: 22 passed, 0 failed.

@@ -1,0 +1,31 @@
+{
+  "name": "voicestrike",
+  "private": true,
+  "version": "0.10.0",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,client -c auto \"npm run dev -w server\" \"npm run dev -w client\"",
+    "build": "npm run build -w server && npm run build -w client",
+    "start": "npm run start -w server",
+    "validate:build1": "node scripts/validate-build1.mjs",
+    "validate:build2": "node scripts/validate-build2.mjs",
+    "validate:build3": "node scripts/validate-build3.mjs",
+    "validate:build4": "node scripts/validate-build4.mjs",
+    "validate:build5": "node scripts/validate-build5.mjs",
+    "validate:build6": "node scripts/validate-build6.mjs",
+    "validate:build7": "node scripts/validate-build7.mjs",
+    "test:reliability-core": "npm exec -w server -- tsx ../scripts/test-reliability-core.mts",
+    "test:command-context": "npm exec -w server -- tsx ../scripts/test-command-context-refactor.mts",
+    "validate:v0.10.0": "node scripts/validate-build7.mjs && npm run test:reliability-core && npm run test:command-context && npm run test:live-regression && npm run test:lifecycle && npm run test:claims && npm run test:event-pipeline",
+    "test:live-regression": "npm exec -w server -- tsx ../scripts/test-live-regression.mts",
+    "test:lifecycle": "npm exec -w server -- tsx ../scripts/test-lifecycle-rc4.mts",
+    "test:event-pipeline": "npm exec -w server -- tsx ../scripts/test-event-pipeline-rc4.mts",
+    "test:claims": "npm exec -w server -- tsx ../scripts/test-claims-rc5.mts"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

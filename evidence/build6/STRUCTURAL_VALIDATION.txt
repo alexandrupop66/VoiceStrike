@@ -1,0 +1,27 @@
+PASS  BUILD6_STATUS exists
+PASS  Build 1 reliability findings preserved
+PASS  Build 6 test plan exists
+PASS  Version is 0.7.0
+PASS  Health reports build 6
+PASS  Server log reports Build 6
+PASS  Demo seeds reversible B184 scan
+PASS  Dashboard includes actions
+PASS  inspect_last_action endpoint exists
+PASS  reverse_last_scan endpoint exists
+PASS  Recovery requires recent inspection
+PASS  Recovery requires exact action id
+PASS  Recovery requires exact component
+PASS  Bare confirmation is deterministically rejected
+PASS  Confirmation comes from latest user transcript
+PASS  Client captures final user transcript
+PASS  Voice registers inspect_last_action
+PASS  Voice registers reverse_last_scan
+PASS  Prompt requires post-reversal verification
+PASS  Tool result remains JSON string
+PASS  Tool results still wait for reply.done
+PASS  Interrupted replies discard pending tools
+PASS  Supervisor renders recovery verified state
+PASS  Client type includes actions
+PASS  Build tag is BUILD 6
+
+BUILD 6 structural validation passed (25/25).

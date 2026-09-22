@@ -1,0 +1,63 @@
+PASS  Controlled corpus contains exactly 30 cases
+PASS  Unknown component remains B185, not nearest-known B184
+PASS  Incomplete B one does not become a technical ID
+PASS  Bare yes is SHORT_AMBIGUOUS
+PASS  Devanagari drift is UNEXPECTED_SCRIPT
+PASS  Irrelevant Latin drift cannot authorise mutation
+PASS  Technical ID alone is an operational signal
+PASS  Explicit cancellation is detected
+PASS  Correction with replacement ID is not cancellation
+PASS  BASE-01 resolves B184
+PASS  BASE-02 resolves B148
+PASS  BASE-03 resolves B184
+PASS  BASE-04 resolves C12
+PASS  BASE-05 resolves JOB-482
+PASS  TECH-01 resolves B184
+PASS  TECH-02 resolves B148
+PASS  TECH-03 resolves B184
+PASS  TECH-04 resolves JOB-482
+PASS  TECH-05 resolves 3040
+PASS  TECH-06 resolves C12
+PASS  TECH-07 resolves D05
+PASS  CORR-01 resolves B184
+PASS  CORR-01 resolution CORRECTED
+PASS  CORR-02 resolves B148
+PASS  CORR-02 resolution CORRECTED
+PASS  CORR-03 cancellation
+PASS  CORR-04 cancellation
+PASS  FRAG-01 fragmented context resolves B184
+PASS  FRAG-03 fragmented context resolves B148
+PASS  FRAG-04 fragmented context resolves JOB-482
+PASS  SAFE-01 sanity SHORT_AMBIGUOUS
+PASS  SAFE-02 sanity SHORT_AMBIGUOUS
+PASS  SAFE-03 sanity UNEXPECTED_SCRIPT
+PASS  SAFE-05 is ambiguous
+PASS  AMBIENT-01 resolves B184
+PASS  Interrupted/corrected old reply becomes stale
+PASS  Fragmented technical ID retains one command ID
+PASS  Fragmented B one / eight four reaches READY
+PASS  Compact B1 fragment stays on the same command
+PASS  Compact B1 fragment remains COLLECTING
+PASS  Compact B1 fragment is not ready for operational reads
+PASS  Compact B1 / eight four keeps one command ID
+PASS  Compact B1 / eight four reaches READY
+PASS  Hybrid B1 eight four resolves B184
+PASS  Numeric STT continuation B1 / 84 keeps one command ID
+PASS  Numeric STT continuation B1 / 84 reaches READY
+PASS  Numeric STT continuation B1 / 84 resolves B184
+PASS  Mixed spoken/numeric B one / 84 keeps one command ID
+PASS  Mixed spoken/numeric B one / 84 reaches READY
+PASS  Mixed spoken/numeric B one / 84 resolves B184
+PASS  Standalone B1 remains COLLECTING
+PASS  Standalone B1 cannot resolve a complete component ID
+PASS  Bare yes cannot reach mutation executor
+PASS  Stale command cannot reach mutation executor
+PASS  Incomplete fragment cannot reach mutation executor
+PASS  Explicit cancellation prevents mutation executor
+PASS  Ambiguous critical entity prevents mutation executor
+PASS  Transcript/tool entity mismatch prevents mutation executor
+PASS  Mutation response needs separate authoritative verify
+PASS  Post-mutation unknown state is inspected without blind retry
+PASS  Verification failure blocks success claim
+
+Reliability core tests: 61 passed, 0 failed.

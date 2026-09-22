@@ -1,0 +1,9 @@
+VoiceStrike BUILD 7 v0.8.10 CLEAN — internal validation
+
+Scope: UI lifecycle only (App.tsx persistent view mounting).
+Reliability/source diff: TurnAuthority, CommandRegistry, speech gates, SafeActionExecutor, server tools and mutation logic are byte-identical to v0.8.9.
+Structural validation: 162/162 PASS.
+Reliability core logic: 200/200 PASS via local TypeScript transpile runtime; official npm/tsx suite remains a Windows launcher gate.
+TypeScript syntax transpile: 31 client/server source files, 0 errors.
+Production build: not run in sandbox because npm dependency installation timed out; Safe Launcher v1.4 must run npm install/build before Windows runtime.
+Windows runtime required: R18 Worker → Supervisor → Worker persistence; then R17 sequential workflow regression.

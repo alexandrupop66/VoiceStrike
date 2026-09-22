@@ -1,0 +1,148 @@
+=== validate-build0 ===
+BUILD 0 structural validation: PASS
+Seed state validation: PASS
+{
+  "job": {
+    "id": "JOB-482",
+    "worker_id": "W01",
+    "station": "3040",
+    "expected_component": "B148",
+    "status": "IN_PROGRESS"
+  },
+  "inventory": [
+    {
+      "component": "B148",
+      "location": "C12",
+      "quantity": 7
+    },
+    {
+      "component": "B184",
+      "location": "A07",
+      "quantity": 11
+    }
+  ]
+}
+(node:1548) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS validate-build0
+
+=== validate-build1 ===
+PASS .env.example
+PASS client/public/pcm-processor.js
+PASS client/src/voice/voiceAgent.ts
+PASS client/src/components/VoicePanel.tsx
+PASS server/src/routes/api.ts
+PASS BUILD1_STATUS.md
+PASS temporary token route
+PASS server-only AssemblyAI key
+PASS Voice Agent WebSocket
+PASS 24 kHz AudioContext
+PASS input.audio streaming
+PASS reply.audio playback
+PASS session.end cleanup
+PASS .env ignored
+PASS validate-build1
+
+=== validate-build2 ===
+PASS  BUILD2_STATUS.md exists
+PASS  Build 1 findings preserved
+PASS  Server exposes first tool
+PASS  Voice session declares get_current_job
+PASS  Voice client handles tool.call
+PASS  Tool result is JSON string
+PASS  Tool result waits for reply.done
+PASS  Unknown tools rejected
+FAIL  Health reports build 2
+FAIL validate-build2
+
+=== validate-build3 ===
+PASS voice declares check_component
+PASS voice declares report_exception
+PASS voice declares update_job_status
+PASS voice declares check_inventory
+PASS backend check-component route
+PASS backend report-exception route
+PASS backend update-job-status route
+PASS backend check-inventory route
+PASS backend deterministic NO_MISMATCH gate
+PASS backend deterministic block authority gate
+PASS demo reset route
+BUILD 3 structural validation passed.
+PASS validate-build3
+
+=== validate-build4 ===
+FAIL  version is 0.5.0
+PASS  BUILD4_STATUS exists
+PASS  BUILD4 test plan exists
+FAIL  health reports build 4
+FAIL  server log says Build 4
+PASS  SQLite data directory auto-created
+PASS  server exposes SSE endpoint
+PASS  server emits text/event-stream
+PASS  server broadcasts authoritative state
+PASS  client uses EventSource
+PASS  client has reconnect state
+PASS  fallback only when SSE not open
+FAIL  UI is labeled BUILD 4
+PASS  Supervisor has live link
+PASS  Supervisor has production exception banner
+PASS  Supervisor derives observed component from audit
+PASS  latest audit is highlighted
+PASS  BUILD 3 authority workflow preserved
+
+BUILD 4 structural validation failed.
+FAIL validate-build4
+
+=== validate-build5 ===
+PASS  BUILD5_STATUS exists
+PASS  Build 5 test plan exists
+PASS  server route source exists
+PASS  voice client exists
+FAIL  package version 0.6.0
+FAIL  health reports build 5
+PASS  inventory alternates table
+PASS  B148 alternative D05 seeded
+PASS  report inventory discrepancy endpoint
+PASS  recent positive stock gate
+PASS  location mismatch gate
+PASS  inventory discrepancy exception
+PASS  find alternative endpoint
+PASS  voice declares discrepancy tool
+PASS  voice declares alternative tool
+PASS  voice routes discrepancy tool locally
+PASS  voice routes alternative tool locally
+PASS  supervisor renders inventory discrepancy
+PASS  supervisor renders alternative stock
+PASS  reset restores C12 qty 7
+FAIL  server log says Build 5
+BUILD 5 structural validation failed: 3 check(s).
+FAIL validate-build5
+
+=== validate-build6 ===
+PASS  BUILD6_STATUS exists
+PASS  Build 1 reliability findings preserved
+PASS  Build 6 test plan exists
+FAIL  Version is 0.7.0
+FAIL  Health reports build 6
+FAIL  Server log reports Build 6
+PASS  Demo seeds reversible B184 scan
+PASS  Dashboard includes actions
+PASS  inspect_last_action endpoint exists
+PASS  reverse_last_scan endpoint exists
+PASS  Recovery requires recent inspection
+PASS  Recovery requires exact action id
+PASS  Recovery requires exact component
+FAIL  Bare confirmation is deterministically rejected
+FAIL  Confirmation comes from latest user transcript
+FAIL  Client captures final user transcript
+PASS  Voice registers inspect_last_action
+PASS  Voice registers reverse_last_scan
+PASS  Prompt requires post-reversal verification
+PASS  Tool result remains JSON string
+PASS  Tool results still wait for reply.done
+PASS  Interrupted replies discard pending tools
+PASS  Supervisor renders recovery verified state
+PASS  Client type includes actions
+FAIL  Build tag is BUILD 6
+FAIL validate-build6
+
