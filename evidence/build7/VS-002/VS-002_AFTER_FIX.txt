@@ -1,0 +1,1 @@
+PASS VS-002: BUILD 7 validator accepts an equivalent CRLF checkout.
