@@ -8,3 +8,5 @@ server/data/*.db-wal
 .env.*
 !.env.example
 .DS_Store
+
+.test-dist/
