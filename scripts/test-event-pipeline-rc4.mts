@@ -15,7 +15,7 @@ const tempDir = mkdtempSync(path.join(tmpdir(), 'voicestrike-rc4-'));
 process.env.VOICESTRIKE_DB_PATH = path.join(tempDir, 'voicestrike-test.db');
 
 const { default: express } = await import('express');
-const { initDatabase } = await import('../server/src/db/database.js');
+const { initDatabase, db } = await import('../server/src/db/database.js');
 const { apiRouter } = await import('../server/src/routes/api.js');
 initDatabase();
 const app = express();
@@ -524,8 +524,12 @@ async function e2Ready(s: Session): Promise<void> {
 }
 
 check('HARNESS no exception inside the provider event pipeline', handlerErrors.length === 0, handlerErrors.slice(0, 3));
-server.close();
 globalThis.fetch = realFetch;
+console.error = realConsoleError;
+await new Promise<void>((resolve, reject) => {
+  server.close((error) => error ? reject(error) : resolve());
+});
+db.close();
 rmSync(tempDir, { recursive: true, force: true });
 console.log(`\nVoiceStrike RC5 event-pipeline harness: ${passed} passed, ${failed} failed.`);
 if (failed > 0) process.exitCode = 1;
