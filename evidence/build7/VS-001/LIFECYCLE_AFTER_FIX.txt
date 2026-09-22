@@ -1,0 +1,41 @@
+(node:1737) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///mnt/data/voicestrike-forensic/voicestrike-build7/.test-regression2/client/src/reliability/replyAuthority.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /mnt/data/voicestrike-forensic/voicestrike-build7/.test-regression2/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS  L0 instruction prompt is the inspect TOOL_CONTINUATION
+PASS  L0 legit PREPARE trusted when no onset occurs during prompt
+PASS  L1 speech onset during a prompt does not revoke its audibility
+PASS  L1 reply.done after an onset still reports the finished continuation
+PASS  L1 onset during the protected prompt does not prevent the PREPARE window opening
+PASS  L1 the inspect turn closes at its continuation reply.done
+PASS  L2 provider reply to a locally rejected turn is an inaudible orphan
+PASS  L2 its reverse_last_scan has no owner
+PASS  L2 such a call can never resolve to authority
+PASS  L2b a rejected fence ends the same-turn tool linger
+PASS  L3 tool emitted in the bound reply is owned by its command
+PASS  L3 a turn with an in-flight call stays open across reply.done
+PASS  L3 its result gets a bound TOOL_CONTINUATION
+PASS  L3 the turn closes after the continuation
+PASS  L4 the old reply is detached (inaudible) by the new accepted turn
+PASS  L4 a tool.call before the new reply starts has no owner (never the old command)
+PASS  L4 no rehydration of the old command over the new turn
+PASS  L4 the new turn keeps its own first reply
+PASS  L4 tools inside the new reply belong to the new command
+PASS  L5 a second provider reply without owed tool result is orphan (no self-reply cascade)
+PASS  L5 turn stays open while a second call is still in flight
+PASS  L5 a released call no longer holds the turn; continuation still bound
+PASS  L5 turn closes after continuation once nothing is held
+PASS  L6 code work hold is accepted for the open turn
+PASS  L6 code work keeps the protected turn open
+PASS  L6 code hold does not consume the provider protected lease
+PASS  L6 no code reply while the provider lease is still attributable only if nothing else is owed
+PASS  L6 expectCodeReply binds the next reply as CODE_CONTINUATION
+PASS  L6 turn stays open while a code reply is owed
+PASS  L6 code-requested reply is CODE_CONTINUATION on the same command
+PASS  L6 after the code continuation a late provider reverse_last_scan is still attributable (it will join the code result)
+PASS  L6 the protected turn closes when its lease expires
+PASS  L7 demotion makes a bound reply inaudible
+PASS  L7 a demoted reply owns no tools
+PASS  L7 the owed continuation survives the demotion
+
+VoiceStrike RC5 lifecycle ledger: 35 passed, 0 failed.

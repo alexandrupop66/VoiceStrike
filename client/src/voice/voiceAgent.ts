@@ -16,7 +16,7 @@ import { emitReliabilityTelemetry, setTelemetryEpoch } from '../reliability/tele
 import { classifyToolReporting } from '../reliability/toolReporting.js';
 import { isRecoverySpeechContextFresh, makeRecoverySpeechContext, type RecoverySpeechContext } from '../reliability/recovery.js';
 import { ProtectedSpeechWindowRegistry } from '../reliability/protectedSpeech.js';
-import { assessAgentReplyClaims } from '../reliability/replyClaims.js';
+import { assessAgentReplyClaims, type ReversalSpeechAuthority } from '../reliability/replyClaims.js';
 
 export type VoiceStatus =
   | 'idle'
@@ -287,6 +287,8 @@ export class VoiceAgentClient {
   private userDeltaCount = 0;
   // RC5: code-owned protected actions keyed by `${turnId}|${commandId}`.
   private readonly codeOwned = new Map<string, CodeOwnedAction>();
+  // VS-001: command-bound authority for what E3 CONFIRM is allowed to say about its outcome.
+  private readonly reversalSpeechAuthority = new Map<string, ReversalSpeechAuthority>();
   // RC5: sentence-level streaming claim gate state for the reply in progress.
   private gatedAudio: Int16Array[] = [];
   private gatedBufferedSamples = 0;
@@ -1080,7 +1082,8 @@ export class VoiceAgentClient {
         this.gatedDeltaText = /^[.,!?;:'")\]]/.test(delta) || !this.gatedDeltaText ? `${this.gatedDeltaText}${delta}` : `${this.gatedDeltaText} ${delta}`;
         if (!this.gatedDeltaTimingOk || endMs == null || !/[.!?]["')\]]?$/.test(delta.trim())) break;
         const command = this.replyClaimCommandId ? this.commandRegistry.get(this.replyClaimCommandId) : null;
-        const decision = assessAgentReplyClaims(this.gatedDeltaText, command);
+        const reversalAuthority = this.replyClaimCommandId ? this.reversalSpeechAuthority.get(this.replyClaimCommandId) ?? null : null;
+        const decision = assessAgentReplyClaims(this.gatedDeltaText, command, reversalAuthority);
         if (!decision.allowed) {
           this.blockGatedReply(decision, this.gatedDeltaText, 'SENTENCE');
           break;
@@ -1103,7 +1106,8 @@ export class VoiceAgentClient {
           // Final full-text check: covers replies without word timing (FULL_BUFFER fallback) and
           // any claim split across sentence boundaries. Already-released sentences passed the gate.
           const command = this.replyClaimCommandId ? this.commandRegistry.get(this.replyClaimCommandId) : null;
-          const claimDecision = assessAgentReplyClaims(text, command);
+          const reversalAuthority = this.replyClaimCommandId ? this.reversalSpeechAuthority.get(this.replyClaimCommandId) ?? null : null;
+          const claimDecision = assessAgentReplyClaims(text, command, reversalAuthority);
           if (!claimDecision.allowed) {
             this.blockGatedReply(claimDecision, text, 'FINAL');
             break;
@@ -2022,6 +2026,9 @@ export class VoiceAgentClient {
       });
       return;
     }
+    if (stage === 'CONFIRM') {
+      this.reversalSpeechAuthority.set(commandId, { state: 'PENDING' });
+    }
     const entry: CodeOwnedAction = {
       key,
       syntheticCallId: `code-${stage.toLowerCase()}-${turnId}`,
@@ -2063,6 +2070,10 @@ export class VoiceAgentClient {
     const waiters = entry.waiters.splice(0);
     for (const resolve of waiters) resolve(completed);
     const record = completed.result && typeof completed.result === 'object' ? completed.result as Record<string, unknown> : {};
+    if (entry.stage === 'CONFIRM') {
+      const outcome = String(record.reliability_outcome ?? record.error ?? 'UNKNOWN_ACTION_STATE') as ReversalSpeechAuthority['outcome'];
+      this.reversalSpeechAuthority.set(entry.commandId, { state: 'FINAL', outcome, verified: record.verified === true });
+    }
     emitReliabilityTelemetry({
       event: 'reliability.code_owned_action_completed',
       sessionId: this.sessionId,
@@ -2217,10 +2228,20 @@ export class VoiceAgentClient {
       resultClass: decision.code,
       detail: `${decision.detail ?? ''}; stage=${stage}; released_ms=${Math.round(this.gatedReleasedSamples / SAMPLES_PER_MS)}; reply_binding=${this.replyAuthority.current()?.reason ?? 'none'}:${this.replyAuthority.current()?.replyId ?? '-'}; workflow=${command?.workflow ?? 'none'}; evidence=${command ? Object.keys(command.evidence).join(',') || 'none' : 'none'}; rejected_text=${text.slice(0, 300)}`,
     });
-    const safeText = 'I could not verify that operational result. Please repeat the request.';
+    const reversalAuthority = this.replyClaimCommandId ? this.reversalSpeechAuthority.get(this.replyClaimCommandId) ?? null : null;
+    const safeText = decision.code === 'CONTRADICTS_VERIFIED_RESULT' && reversalAuthority?.state === 'FINAL' && reversalAuthority.outcome === 'VERIFIED_SUCCESS' && reversalAuthority.verified === true
+      ? 'The reversal was completed and independently verified.'
+      : decision.code === 'UNVERIFIED_FAILURE_CLAIM' && reversalAuthority?.state === 'PENDING'
+        ? 'The reversal result is still being verified.'
+        : 'I could not verify that operational result. Please repeat the request.';
     this.callbacks.onTranscript({ id: makeId('agent-safe'), role: 'agent', text: safeText, final: true });
     this.callbacks.onStatus('ready', `Unsafe operational claim suppressed (${decision.code ?? 'UNVERIFIED'}).`);
-    this.sendProviderContextNote('Your last statement was not supported by verified VoiceStrike evidence and was not played to the worker. Do not repeat it. Only state facts present in tool results.');
+    const providerCorrection = reversalAuthority?.state === 'FINAL' && reversalAuthority.outcome === 'VERIFIED_SUCCESS' && reversalAuthority.verified === true
+      ? 'Your last statement contradicted the authoritative VoiceStrike result and was not played to the worker. The reversal is VERIFIED_SUCCESS and independently verified. Do not state or imply failure.'
+      : reversalAuthority?.state === 'PENDING'
+        ? 'Your last statement claimed an E3 outcome before VoiceStrike had an authoritative result and was not played to the worker. Do not state success or failure until the result arrives.'
+        : 'Your last statement was not supported by verified VoiceStrike evidence and was not played to the worker. Do not repeat it. Only state facts present in tool results.';
+    this.sendProviderContextNote(providerCorrection);
   }
 
   private noteFirstAudible(): void {
@@ -2320,6 +2341,7 @@ export class VoiceAgentClient {
     this.callReplyIds.clear();
     this.currentProviderReplyId = null;
     this.codeOwned.clear();
+    this.reversalSpeechAuthority.clear();
     this.userItemVerdicts.clear();
     this.interruptedCallIds.clear();
     this.gatedAudio = [];

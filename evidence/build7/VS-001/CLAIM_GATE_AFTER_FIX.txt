@@ -1,0 +1,32 @@
+(node:2012) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///mnt/data/voicestrike-forensic/voicestrike-build7/.test-claims-run/client/src/reliability/replyClaims.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /mnt/data/voicestrike-forensic/voicestrike-build7/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS  normalise "B one four eight" -> B148
+PASS  normalise "bee one eight four" -> B184
+PASS  normalise "B 148" -> B148
+PASS  normalise "B148" -> B148
+PASS  normalise "B one forty eight" -> B148
+PASS  normalise "D zero five" -> D05
+PASS  normalise "D oh five" -> D05
+PASS  normalise "C twelve" -> C12
+PASS  normalise "C one two" -> C12
+PASS  normalise "location D nine nine" -> location D99
+PASS  an article with one digit word is not an ID ("a one-time check")
+PASS  a count after a spelled location stays a quantity ("D zero five four units")
+PASS  a numeric count after a compact location stays a quantity ("D05 4 units")
+PASS  job/station identifiers are untouched
+PASS  masking removes every ID digit
+PASS  LIVE E2 sentence with spelled component is allowed (quantity = 4 only)
+PASS  spelled component and spelled location are allowed
+PASS  logged claim with spelled location allowed
+PASS  wrong quantity with spelled location is rejected
+PASS  spelled unauthorised location is rejected (former false negative)
+PASS  compact unauthorised location still rejected
+PASS  no discrepancy evidence => logged claim rejected
+PASS  VS-001 pending CONFIRM blocks failure narration
+PASS  VS-001 VERIFIED_SUCCESS blocks contradictory failure narration
+PASS  VS-001 failed authoritative outcome permits truthful failure narration
+PASS  VS-001 failed authoritative outcome still blocks success narration
+
+VoiceStrike RC5 claim gate: 26 passed, 0 failed.

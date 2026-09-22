@@ -157,10 +157,13 @@ await s.settle();
 const failureNarrations = s.transcripts.filter((entry) => entry.role === 'agent' && /could not complete the reversal/i.test(entry.text));
 const rejectedFailureClaims = telemetry.filter((entry) => entry.event === 'reliability.reply_claim_rejected' && /could not complete the reversal/i.test(String(entry.detail ?? '')));
 
+const truthfulVerifiedNarrations = s.transcripts.filter((entry) => entry.role === 'agent' && /reversal was completed and independently verified/i.test(entry.text));
+
+let passed = 0;
 let failed = 0;
 const check = (label, ok, detail) => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}${detail === undefined ? '' : `  got=${JSON.stringify(detail)}`}`);
-  if (!ok) failed += 1;
+  if (ok) passed += 1; else failed += 1;
 };
 
 check('VS-001 fresh E3 PREPARE reaches SECOND_CONFIRMATION_REQUIRED', prepResult?.error === 'SECOND_CONFIRMATION_REQUIRED', prepResult);
@@ -168,6 +171,7 @@ check('VS-001 CONFIRM authoritative result is VERIFIED_SUCCESS', confirmResult?.
 check('VS-001 provider reverse_last_scan joins code-owned execution and total mutation count is exactly 1', reverseMutations === 1 && telemetry.some((entry) => entry.event === 'reliability.code_owned_action_joined' && entry.resultClass === 'CONFIRM'), { reverseMutations });
 check('VS-001 false failure narration is rejected and never surfaced', failureNarrations.length === 0 && rejectedFailureClaims.length >= 1, { failureNarrations, rejectedFailureClaims: rejectedFailureClaims.length });
 check('VS-001 false failure audio is not released', s.audible() - audibleBefore === 0, { audibleSamplesAdded: s.audible() - audibleBefore });
+check('VS-001 transcript is corrected to the authoritative verified-success outcome', truthfulVerifiedNarrations.length >= 1, truthfulVerifiedNarrations);
 
-console.log(`\nVS-001 regression: ${5 - failed} passed, ${failed} failed.`);
+console.log(`\nVS-001 regression: ${passed} passed, ${failed} failed.`);
 if (failed > 0) throw new Error(`VS-001 reproduced: ${failed} speech-truth assertion(s) failed.`);
