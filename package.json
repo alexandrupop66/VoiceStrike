@@ -19,7 +19,7 @@
     "validate:build7": "node scripts/validate-build7.mjs",
     "test:reliability-core": "npm exec -w server -- tsx ../scripts/test-reliability-core.mts",
     "test:command-context": "npm exec -w server -- tsx ../scripts/test-command-context-refactor.mts",
-    "validate:v0.10.0": "node scripts/validate-build7.mjs && npm run test:reliability-core && npm run test:command-context && npm run test:live-regression && npm run test:lifecycle && npm run test:claims && npm run test:event-pipeline && npm run test:vs-001 && npm run test:vs-002 && npm run test:vs-003",
+    "validate:v0.10.0": "node scripts/validate-build7.mjs && npm run test:reliability-core && npm run test:command-context && npm run test:live-regression && npm run test:lifecycle && npm run test:claims && npm run test:event-pipeline && npm run test:vs-001 && npm run test:vs-002 && npm run test:vs-003 && npm run test:vs-004",
     "test:live-regression": "npm exec -w server -- tsx ../scripts/test-live-regression.mts",
     "test:lifecycle": "npm exec -w server -- tsx ../scripts/test-lifecycle-rc4.mts",
     "test:event-pipeline": "npm exec -w server -- tsx ../scripts/test-event-pipeline-rc4.mts",
@@ -27,7 +27,8 @@
     "test:vs-001": "rm -rf .test-dist && tsc --target ES2022 --module ESNext --moduleResolution Bundler --lib ES2022,DOM,DOM.Iterable --skipLibCheck --strict --rootDir client/src --outDir .test-dist client/src/voice/voiceAgent.ts && node scripts/test-vs-001-spoken-result-authority.mjs",
     "ci:required": "npm run validate:v0.10.0 && npm run build",
     "test:vs-002": "node scripts/test-validator-crlf.mjs",
-    "test:vs-003": "node scripts/test-event-pipeline-cleanup.mjs"
+    "test:vs-003": "node scripts/test-event-pipeline-cleanup.mjs",
+    "test:vs-004": "node scripts/test-vs-004-cross-platform-test-cleanup.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
