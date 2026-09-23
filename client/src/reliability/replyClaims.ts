@@ -105,6 +105,14 @@ export function assessAgentReplyClaims(
 
   const reversalSuccess = claimsReversalSuccess(text);
   const reversalFailure = claimsReversalFailure(text);
+  const genericOperationalFailure = /\b(?:(?:could not|couldn't|cannot|can't|was unable to|failed to)\s+(?:complete|finish|verify)\b|(?:request|operation)\s+(?:failed|could not be completed))\b/i.test(text);
+
+  // VS-010: once E2 is READY, a provider apology/failure statement is not evidence. Until an
+  // authoritative inventory read has actually returned, the model may not terminate the worker's
+  // command by claiming that the request could not be completed.
+  if (command.workflow === 'E2_MISSING_INVENTORY' && command.status === 'READY' && !command.evidence.inventoryCheck && genericOperationalFailure) {
+    return { allowed: false, code: 'UNVERIFIED_FAILURE_CLAIM', detail: 'E2 failure was spoken before any authoritative inventory read returned for the READY command.' };
+  }
 
   if (command.workflow === 'E3_MISTAKEN_SCAN' && reversalAuthority) {
     if (reversalSuccess && (reversalAuthority.state !== 'FINAL' || reversalAuthority.outcome !== 'VERIFIED_SUCCESS' || reversalAuthority.verified !== true)) {

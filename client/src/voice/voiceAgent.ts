@@ -336,6 +336,10 @@ export class VoiceAgentClient {
   // E1/E2/E3 PCM is gated per sentence (RC5); see resetClaimGate/releaseGatedAudio.
   private replyClaimMode: 'ALLOW' | 'BUFFER' | 'BLOCK' = 'ALLOW';
   private replyClaimCommandId: string | null = null;
+  // VS-010: one code-bound provider retry is allowed when a READY E2 command is abandoned by
+  // an unsupported generic failure before check_inventory was attempted.
+  private pendingE2Retry: { commandId: string; key: string; componentId: string; locationId: string } | null = null;
+  private readonly e2RetryUsed = new Set<string>();
 
   constructor(callbacks: VoiceAgentCallbacks) {
     this.callbacks = callbacks;
@@ -1186,6 +1190,38 @@ export class VoiceAgentClient {
         this.commandRegistry.finishReply();
         const finishedBinding = this.replyAuthority.finishReply();
         const suppressed = !finishedBinding?.authorised;
+
+        const e2Retry = this.pendingE2Retry;
+        if (
+          e2Retry &&
+          finishedBinding?.authorised &&
+          finishedBinding.commandId === e2Retry.commandId &&
+          this.ws &&
+          this.ws.readyState === WebSocket.OPEN &&
+          this.replyAuthority.canRequestCodeReply(e2Retry.commandId, e2Retry.key)
+        ) {
+          this.sendProviderContextNote(
+            `VoiceStrike E2 retry: the worker already supplied component ${e2Retry.componentId}, location ${e2Retry.locationId}, and EMPTY. Call check_inventory exactly once for component ${e2Retry.componentId}. Do not ask the worker to repeat and do not claim failure before the tool result.`,
+          );
+          this.replyAuthority.expectCodeReply(e2Retry.commandId);
+          this.replyAuthority.releaseCodeWork(e2Retry.key);
+          this.pendingE2Retry = null;
+          this.ws.send(JSON.stringify({
+            type: 'reply.create',
+            instructions: `Continue the existing VoiceStrike E2 command. Call check_inventory exactly once with component_id ${e2Retry.componentId}. Do not ask the worker to repeat. After the tool result, report only the authoritative VoiceStrike outcome.`,
+          }));
+          emitReliabilityTelemetry({
+            event: 'reliability.e2_code_retry_requested',
+            sessionId: this.sessionId,
+            epoch: this.epochs.current(),
+            turnId: finishedBinding.turnId,
+            commandId: e2Retry.commandId,
+            entityKind: 'component_id',
+            entityValue: e2Retry.componentId,
+            resultClass: 'CHECK_INVENTORY_RETRY',
+            detail: `location=${e2Retry.locationId}; one code-bound retry requested after unsupported provider failure`,
+          });
+        }
 
         const pendingWindow = this.protectedSpeechWindows.current();
         if (pendingWindow?.state === 'AWAITING_PROMPT_DONE' &&
@@ -2237,21 +2273,45 @@ export class VoiceAgentClient {
       && command.slots.component
         ? `Which location for ${command.slots.component} is empty?`
         : null;
+    const e2ReadyFailure = decision.code === 'UNVERIFIED_FAILURE_CLAIM'
+      && command?.workflow === 'E2_MISSING_INVENTORY'
+      && command.status === 'READY'
+      && !command.evidence.inventoryCheck
+      && Boolean(command.slots.component)
+      && Boolean(command.slots.reportedLocation);
+    let e2RetryArmed = false;
+    if (e2ReadyFailure && command && !this.e2RetryUsed.has(command.id) && !this.pendingE2Retry) {
+      const key = `e2-retry-${command.id}`;
+      if (this.replyAuthority.holdCodeWork(command.id, key)) {
+        this.pendingE2Retry = {
+          commandId: command.id,
+          key,
+          componentId: String(command.slots.component),
+          locationId: String(command.slots.reportedLocation),
+        };
+        this.e2RetryUsed.add(command.id);
+        e2RetryArmed = true;
+      }
+    }
     const safeText = decision.code === 'CONTRADICTS_VERIFIED_RESULT' && reversalAuthority?.state === 'FINAL' && reversalAuthority.outcome === 'VERIFIED_SUCCESS' && reversalAuthority.verified === true
       ? 'The reversal was completed and independently verified.'
       : decision.code === 'UNVERIFIED_FAILURE_CLAIM' && reversalAuthority?.state === 'PENDING'
         ? 'The reversal result is still being verified.'
-        : e2LocationClarification
-          ?? 'I could not verify that operational result. Please repeat the request.';
+        : e2RetryArmed && command
+          ? `I have ${command.slots.component} and location ${command.slots.reportedLocation}. I am verifying that inventory now.`
+          : e2LocationClarification
+            ?? 'I could not verify that operational result. Please repeat the request.';
     this.callbacks.onTranscript({ id: makeId('agent-safe'), role: 'agent', text: safeText, final: true });
     this.callbacks.onStatus('ready', `Unsafe operational claim suppressed (${decision.code ?? 'UNVERIFIED'}).`);
     const providerCorrection = reversalAuthority?.state === 'FINAL' && reversalAuthority.outcome === 'VERIFIED_SUCCESS' && reversalAuthority.verified === true
       ? 'Your last statement contradicted the authoritative VoiceStrike result and was not played to the worker. The reversal is VERIFIED_SUCCESS and independently verified. Do not state or imply failure.'
       : reversalAuthority?.state === 'PENDING'
         ? 'Your last statement claimed an E3 outcome before VoiceStrike had an authoritative result and was not played to the worker. Do not state success or failure until the result arrives.'
-        : e2LocationClarification
-          ? `Your last statement was not supported by verified VoiceStrike evidence and was not played to the worker. The active E2 command is still missing only reportedLocation. Ask only: "${e2LocationClarification}" Do not claim that a discrepancy was logged or inventory state changed.`
-          : 'Your last statement was not supported by verified VoiceStrike evidence and was not played to the worker. Do not repeat it. Only state facts present in tool results.';
+        : e2RetryArmed && command
+          ? `Your last statement falsely ended a READY E2 command before any authoritative inventory read. The worker has already supplied component ${command.slots.component}, location ${command.slots.reportedLocation}, and EMPTY. Do not ask them to repeat. VoiceStrike will request one code-bound continuation; in that continuation call check_inventory exactly once for component ${command.slots.component}.`
+          : e2LocationClarification
+            ? `Your last statement was not supported by verified VoiceStrike evidence and was not played to the worker. The active E2 command is still missing only reportedLocation. Ask only: "${e2LocationClarification}" Do not claim that a discrepancy was logged or inventory state changed.`
+            : 'Your last statement was not supported by verified VoiceStrike evidence and was not played to the worker. Do not repeat it. Only state facts present in tool results.';
     this.sendProviderContextNote(providerCorrection);
   }
 
@@ -2363,6 +2423,8 @@ export class VoiceAgentClient {
     this.replySeq = 0;
     this.replyClaimMode = 'ALLOW';
     this.replyClaimCommandId = null;
+    this.pendingE2Retry = null;
+    this.e2RetryUsed.clear();
 
     emitReliabilityTelemetry({
       event: 'reliability.session_epoch_changed',
