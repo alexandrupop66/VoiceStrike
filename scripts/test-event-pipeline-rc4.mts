@@ -523,6 +523,26 @@ async function e2Ready(s: Session): Promise<void> {
   check('P17 odd-length PCM chunk handled without an exception', !handlerErrors.some((e) => e.includes('RangeError')));
 }
 
+// P18 / VS-008 — incomplete E2 must preserve the exact pending clarification after an unsafe provider claim.
+{
+  const s = await freshSession();
+  s.say("VoiceStrike location for B148 is empty.", 'u-e2-vs008');
+  const call = s.callId();
+  s.reply({ text: 'Let me check the inventory record.', tools: [{ callId: call, name: 'check_inventory', args: { component_id: 'B148' } }] });
+  await s.settle(150);
+  const result = s.resultsFor(call)[0] ?? {};
+  check('P18 VS-008 read completes but deterministic E2 does not mutate without reportedLocation', !JSON.stringify(result).includes('deterministic_workflow'), result);
+
+  const mark = telemetry.length;
+  s.reply({ text: 'I logged the discrepancy at C12.' });
+  await s.settle();
+
+  const rejected = since(mark, 'reliability.reply_claim_rejected');
+  const lastAgent = [...s.transcripts].reverse().find((entry) => entry.role === 'agent')?.text ?? '';
+  check('P18 VS-008 unsafe mutation claim is rejected', rejected.some((t) => t.resultClass === 'UNVERIFIED_MUTATION_CLAIM'), rejected);
+  check('P18 VS-008 safe fallback asks only for the pending E2 location', /which location for B148 is empty\??/i.test(lastAgent), lastAgent);
+}
+
 check('HARNESS no exception inside the provider event pipeline', handlerErrors.length === 0, handlerErrors.slice(0, 3));
 globalThis.fetch = realFetch;
 console.error = realConsoleError;
