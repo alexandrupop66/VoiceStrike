@@ -86,6 +86,10 @@ function claimsReversalFailure(text: string): boolean {
   return /\b(?:(?:could not|couldn't|cannot|can't|did not|didn't|failed to|was unable to)\s+(?:complete\s+)?(?:the\s+)?(?:reversal|reverse(?:\s+(?:the\s+)?scan)?)|(?:reversal|reverse(?:\s+scan)?)\s+(?:failed|was not completed|wasn't completed|did not complete))\b/i.test(text);
 }
 
+function claimsGenericOperationalFailure(text: string): boolean {
+  return /\b(?:could not|couldn't|cannot|can't|failed to|unable to|was unable to)\s+(?:complete|verify|process|finish)(?:\s+(?:that|the|this))?\s*(?:request|operation|result|workflow)?\b/i.test(text);
+}
+
 /**
  * Final, deterministic speech claim gate.
  *
@@ -96,6 +100,7 @@ export function assessAgentReplyClaims(
   rawText: string,
   command: PendingCommand | null,
   reversalAuthority: ReversalSpeechAuthority | null = null,
+  e2Authority: ReversalSpeechAuthority | null = null,
 ): ReplyClaimDecision {
   if (!command) return { allowed: true };
   // RC5: normalise spoken identifiers first; quantities are parsed only with identifiers masked.
@@ -105,6 +110,16 @@ export function assessAgentReplyClaims(
 
   const reversalSuccess = claimsReversalSuccess(text);
   const reversalFailure = claimsReversalFailure(text);
+  const operationalFailure = claimsGenericOperationalFailure(text);
+
+  if (command.workflow === 'E2_MISSING_INVENTORY' && e2Authority) {
+    if (operationalFailure && e2Authority.state === 'PENDING') {
+      return { allowed: false, code: 'UNVERIFIED_FAILURE_CLAIM', detail: 'E2 failure was spoken while the authoritative code-owned inventory workflow was still pending.' };
+    }
+    if (operationalFailure && e2Authority.state === 'FINAL' && e2Authority.outcome === 'VERIFIED_SUCCESS' && e2Authority.verified === true) {
+      return { allowed: false, code: 'CONTRADICTS_VERIFIED_RESULT', detail: 'E2 failure contradicts the completed verified inventory workflow.' };
+    }
+  }
 
   if (command.workflow === 'E3_MISTAKEN_SCAN' && reversalAuthority) {
     if (reversalSuccess && (reversalAuthority.state !== 'FINAL' || reversalAuthority.outcome !== 'VERIFIED_SUCCESS' || reversalAuthority.verified !== true)) {
