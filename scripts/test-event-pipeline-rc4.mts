@@ -543,6 +543,17 @@ async function e2Ready(s: Session): Promise<void> {
   check('P18 VS-008 safe fallback asks only for the pending E2 location', /which location for B148 is empty\??/i.test(lastAgent), lastAgent);
 }
 
+// P19 / VS-009 — final worker-visible agent transcript must canonicalise technical IDs.
+{
+  const s = await freshSession();
+  await e2Ready(s);
+  s.reply({ text: 'A discrepancy was logged, and the primary location C 1 2 has been marked as unavailable. You can find four B 1 4 8 at location D 0 5.' });
+  await s.settle();
+  const lastAgent = [...s.transcripts].reverse().find((entry) => entry.role === 'agent')?.text ?? '';
+  check('P19 VS-009 worker-visible transcript canonicalises B148/C12/D05', /B148/.test(lastAgent) && /C12/.test(lastAgent) && /D05/.test(lastAgent), lastAgent);
+  check('P19 VS-009 worker-visible transcript contains no spaced critical IDs', !/\b[BCD](?:\s+\d){2,6}\b/.test(lastAgent), lastAgent);
+}
+
 check('HARNESS no exception inside the provider event pipeline', handlerErrors.length === 0, handlerErrors.slice(0, 3));
 globalThis.fetch = realFetch;
 console.error = realConsoleError;
