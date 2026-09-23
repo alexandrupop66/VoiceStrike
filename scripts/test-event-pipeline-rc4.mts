@@ -554,6 +554,34 @@ async function e2Ready(s: Session): Promise<void> {
   check('P19 VS-009 worker-visible transcript contains no spaced critical IDs', !/\b[BCD](?:\s+\d){2,6}\b/.test(lastAgent), lastAgent);
 }
 
+// P20 / VS-010 — E2 must recover after STT drops the component letter, then worker re-states B148.
+{
+  const s = await freshSession();
+
+  // Live sequence: STT loses the leading B from B148.
+  s.say('VoiceStrike location for 148 is empty.', 'u-e2-vs010-1');
+  const jobCall = s.callId();
+  s.reply({ text: 'Let me check the current job.', tools: [{ callId: jobCall, name: 'get_current_job' }] });
+  await s.settle(150);
+  check('P20 VS-010 current job read completes after incomplete E2 component', s.resultsFor(jobCall).length === 1, s.resultsFor(jobCall));
+
+  // Worker supplies the location while component is still unresolved.
+  s.say('C12.', 'u-e2-vs010-2');
+  s.reply({ text: 'I need to confirm the component for your report. Did you mean component B148?' });
+  await s.settle();
+
+  // Worker now explicitly re-states the complete component in a full E2 utterance.
+  s.say('VoiceStrike location for B148 is empty.', 'u-e2-vs010-3');
+  const inventoryCall = s.callId();
+  s.reply({ tools: [{ callId: inventoryCall, name: 'check_inventory', args: { component_id: 'B148' } }] });
+  await s.settle(180);
+
+  const inventoryResult = s.resultsFor(inventoryCall)[0] ?? {};
+  const blockedCritical = s.toolEvents.filter((e) => e.name === 'check_inventory' && e.status === 'blocked' && String(e.detail ?? '').includes('CRITICAL_ENTITY_REQUIRED'));
+  check('P20 VS-010 explicit B148 confirmation allows check_inventory endpoint result', Boolean(inventoryResult.ok), inventoryResult);
+  check('P20 VS-010 no CRITICAL_ENTITY_REQUIRED remains after explicit B148 re-statement', blockedCritical.length === 0, blockedCritical);
+}
+
 check('HARNESS no exception inside the provider event pipeline', handlerErrors.length === 0, handlerErrors.slice(0, 3));
 globalThis.fetch = realFetch;
 console.error = realConsoleError;
