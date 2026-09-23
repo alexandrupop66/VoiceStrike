@@ -17,6 +17,7 @@ import { classifyToolReporting } from '../reliability/toolReporting.js';
 import { isRecoverySpeechContextFresh, makeRecoverySpeechContext, type RecoverySpeechContext } from '../reliability/recovery.js';
 import { ProtectedSpeechWindowRegistry } from '../reliability/protectedSpeech.js';
 import { assessAgentReplyClaims, type ReversalSpeechAuthority } from '../reliability/replyClaims.js';
+import { normalizeSpokenTechnicalIds } from '../reliability/spokenIds.js';
 
 export type VoiceStatus =
   | 'idle'
@@ -1117,12 +1118,14 @@ export class VoiceAgentClient {
           this.releaseGatedAudio();
         }
 
-        // Only audio/text that passed the deterministic claim gate can become echo context.
+        // Keep the raw provider wording as echo context because it matches the audio that was
+        // actually rendered, but canonicalise technical IDs in the worker-visible final transcript.
         this.duplexGuard.noteAgentText(text);
+        const workerVisibleText = normalizeSpokenTechnicalIds(text);
         this.callbacks.onTranscript({
           id: makeId('agent'),
           role: 'agent',
-          text,
+          text: workerVisibleText,
           final: true,
           interrupted: Boolean(message.interrupted),
         });
