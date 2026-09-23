@@ -572,7 +572,10 @@ async function e2Ready(s: Session): Promise<void> {
   await s.settle(120);
   s.reply({ text: 'I need to confirm the component for your report. Did you mean component B148?' });
   await s.settle();
-  await sleep(800);
+  // This regression targets the post-clarification handoff, not echo-tail timing. Move the
+  // simulated audible boundary into the past so the worker's next wake-authorised turn is accepted.
+  const timingInternals = s.agent as unknown as { duplexGuard: { markReplyDone(now?: number): void } };
+  timingInternals.duplexGuard.markReplyDone(Date.now() - 1_000);
 
   s.say('VoiceStrike location for B148 is empty.', 'u-vs010-3');
   const internals = s.agent as unknown as { commandRegistry: { current(): { status?: string; slots?: Record<string, unknown> } | null } };
