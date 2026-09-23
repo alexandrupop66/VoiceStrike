@@ -2229,18 +2229,26 @@ export class VoiceAgentClient {
       detail: `${decision.detail ?? ''}; stage=${stage}; released_ms=${Math.round(this.gatedReleasedSamples / SAMPLES_PER_MS)}; reply_binding=${this.replyAuthority.current()?.reason ?? 'none'}:${this.replyAuthority.current()?.replyId ?? '-'}; workflow=${command?.workflow ?? 'none'}; evidence=${command ? Object.keys(command.evidence).join(',') || 'none' : 'none'}; rejected_text=${text.slice(0, 300)}`,
     });
     const reversalAuthority = this.replyClaimCommandId ? this.reversalSpeechAuthority.get(this.replyClaimCommandId) ?? null : null;
+    const e2LocationClarification = command?.workflow === 'E2_MISSING_INVENTORY'
+      && command.pendingClarification?.field === 'reportedLocation'
+      && command.slots.component
+        ? `Which location for ${command.slots.component} is empty?`
+        : null;
     const safeText = decision.code === 'CONTRADICTS_VERIFIED_RESULT' && reversalAuthority?.state === 'FINAL' && reversalAuthority.outcome === 'VERIFIED_SUCCESS' && reversalAuthority.verified === true
       ? 'The reversal was completed and independently verified.'
       : decision.code === 'UNVERIFIED_FAILURE_CLAIM' && reversalAuthority?.state === 'PENDING'
         ? 'The reversal result is still being verified.'
-        : 'I could not verify that operational result. Please repeat the request.';
+        : e2LocationClarification
+          ?? 'I could not verify that operational result. Please repeat the request.';
     this.callbacks.onTranscript({ id: makeId('agent-safe'), role: 'agent', text: safeText, final: true });
     this.callbacks.onStatus('ready', `Unsafe operational claim suppressed (${decision.code ?? 'UNVERIFIED'}).`);
     const providerCorrection = reversalAuthority?.state === 'FINAL' && reversalAuthority.outcome === 'VERIFIED_SUCCESS' && reversalAuthority.verified === true
       ? 'Your last statement contradicted the authoritative VoiceStrike result and was not played to the worker. The reversal is VERIFIED_SUCCESS and independently verified. Do not state or imply failure.'
       : reversalAuthority?.state === 'PENDING'
         ? 'Your last statement claimed an E3 outcome before VoiceStrike had an authoritative result and was not played to the worker. Do not state success or failure until the result arrives.'
-        : 'Your last statement was not supported by verified VoiceStrike evidence and was not played to the worker. Do not repeat it. Only state facts present in tool results.';
+        : e2LocationClarification
+          ? `Your last statement was not supported by verified VoiceStrike evidence and was not played to the worker. The active E2 command is still missing only reportedLocation. Ask only: "${e2LocationClarification}" Do not claim that a discrepancy was logged or inventory state changed.`
+          : 'Your last statement was not supported by verified VoiceStrike evidence and was not played to the worker. Do not repeat it. Only state facts present in tool results.';
     this.sendProviderContextNote(providerCorrection);
   }
 
