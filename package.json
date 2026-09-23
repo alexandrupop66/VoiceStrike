@@ -19,7 +19,7 @@
     "validate:build7": "node scripts/validate-build7.mjs",
     "test:reliability-core": "npm exec -w server -- tsx ../scripts/test-reliability-core.mts",
     "test:command-context": "npm exec -w server -- tsx ../scripts/test-command-context-refactor.mts",
-    "validate:v0.10.0": "node scripts/validate-build7.mjs && npm run test:reliability-core && npm run test:command-context && npm run test:live-regression && npm run test:lifecycle && npm run test:claims && npm run test:event-pipeline && npm run test:vs-001 && npm run test:vs-002 && npm run test:vs-003 && npm run test:vs-004 && npm run test:vs-005 && npm run test:vs-006",
+    "validate:v0.10.0": "node scripts/validate-build7.mjs && npm run test:reliability-core && npm run test:command-context && npm run test:live-regression && npm run test:lifecycle && npm run test:claims && npm run test:event-pipeline && npm run test:vs-001 && npm run test:vs-002 && npm run test:vs-003 && npm run test:vs-004 && npm run test:vs-005 && npm run test:vs-006 && npm run test:vs-007",
     "test:live-regression": "npm exec -w server -- tsx ../scripts/test-live-regression.mts",
     "test:lifecycle": "npm exec -w server -- tsx ../scripts/test-lifecycle-rc4.mts",
     "test:event-pipeline": "npm exec -w server -- tsx ../scripts/test-event-pipeline-rc4.mts",
@@ -30,7 +30,8 @@
     "test:vs-003": "node scripts/test-event-pipeline-cleanup.mjs",
     "test:vs-004": "node scripts/test-vs-004-cross-platform-test-cleanup.mjs",
     "test:vs-005": "node scripts/test-vs-005-ci-windows.mjs",
-    "test:vs-006": "node scripts/test-vs-006-feature-branch-ci-trigger.mjs"
+    "test:vs-006": "node scripts/test-vs-006-feature-branch-ci-trigger.mjs",
+    "test:vs-007": "npm exec -w server -- tsx ../scripts/test-vs-007-e2-location-clarification.mts"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
