@@ -578,6 +578,7 @@ async function e2Ready(s: Session): Promise<void> {
   timingInternals.duplexGuard.markReplyDone(Date.now() - 1_000);
 
   s.say('VoiceStrike location for B148 is empty.', 'u-vs010-3');
+  await s.settle();
   const internals = s.agent as unknown as { commandRegistry: { current(): { status?: string; slots?: Record<string, unknown> } | null } };
   const current = internals.commandRegistry.current();
   check('P20 VS-010 clarified E2 command is READY with B148/C12', current?.status === 'READY' && current?.slots?.component === 'B148' && current?.slots?.reportedLocation === 'C12', current);
