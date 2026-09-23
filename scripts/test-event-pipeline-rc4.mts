@@ -572,6 +572,7 @@ async function e2Ready(s: Session): Promise<void> {
   await s.settle(120);
   s.reply({ text: 'I need to confirm the component for your report. Did you mean component B148?' });
   await s.settle();
+  await sleep(800);
 
   s.say('VoiceStrike location for B148 is empty.', 'u-vs010-3');
   const internals = s.agent as unknown as { commandRegistry: { current(): { status?: string; slots?: Record<string, unknown> } | null } };
