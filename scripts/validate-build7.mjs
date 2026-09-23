@@ -167,7 +167,12 @@ check('Unrelated ambient speech does not extend wake window', ambient.includes('
 // per-reply immutable binding that a later reply boundary cannot clear.
 check('Mutable session suppression flag is gone', !voice.includes('suppressAmbientReply'));
 check('Replies are bound to the accepted turn that caused them', voice.includes('this.replyAuthority.beginReply(replyId, this.epochs.current())') && voice.includes('TURN_AUTHORITY_REQUIRED'));
-check('Orphan replies are never audible and operational PCM is claim-gated', voice.includes('if (!audio || !this.replyAuthority.isCurrentReplyAuthorised()) break;') && voice.includes("this.replyClaimMode === 'BUFFER'") && voice.includes('assessAgentReplyClaims(text, command, reversalAuthority)') && voice.includes('this.gatedAudio = [];') && voice.includes('if (!text || !authorised) break;'));
+check('Orphan replies are never audible and operational PCM is claim-gated',
+  voice.includes('if (!audio || !this.replyAuthority.isCurrentReplyAuthorised()) break;') &&
+  voice.includes("this.replyClaimMode === 'BUFFER'") &&
+  voice.includes('assessAgentReplyClaims(text, command, reversalAuthority, e2Authority)') &&
+  voice.includes('this.gatedAudio = [];') &&
+  voice.includes('if (!text || !authorised) break;'));
 check('RC4 speech onset is recorded without revoking the reply in progress', voice.includes('this.replyAuthority.interruptCurrentReply(this.lastSpeechStartedAt)') && replyAuthority.includes('interruptCurrentReply(now = Date.now())') && replyAuthority.includes('onsetDuringReplyAt') && !replyAuthority.includes('delayedToolOwner'));
 check('RC4 no stale tail and no rehydration over a newer accepted turn', !replyAuthority.includes('delayedToolOwner') && replyAuthority.includes('this.lingering = null;') && replyAuthority.includes("if (!turn.initialReplyStarted) return null;"));
 check('Mutation requests carry typed workflow and command-ready headers', voice.includes('X-VoiceStrike-Workflow') && voice.includes('X-VoiceStrike-Command-Ready'));
