@@ -582,6 +582,33 @@ async function e2Ready(s: Session): Promise<void> {
   check('P20 VS-010 no CRITICAL_ENTITY_REQUIRED remains after explicit B148 re-statement', blockedCritical.length === 0, blockedCritical);
 }
 
+// P21 / VS-010 — once the worker resolves B148, E2 must not depend on the provider choosing check_inventory.
+{
+  const s = await freshSession();
+
+  s.say('VoiceStrike location for 148 is empty.', 'u-e2-vs010-code-1');
+  const jobCall = s.callId();
+  s.reply({ tools: [{ callId: jobCall, name: 'get_current_job' }] });
+  await s.settle(120);
+
+  s.say('C12.', 'u-e2-vs010-code-2');
+  s.reply({ text: 'I need to confirm the component for your report. Did you mean component B148?' });
+  await s.settle();
+
+  const beforeInventory = endpointCalls.filter((entry) => entry.includes('/api/tools/check-inventory')).length;
+  const beforeDiscrepancy = endpointCalls.filter((entry) => entry.includes('/api/tools/report-inventory-discrepancy')).length;
+
+  // This is the exact live recovery utterance. Deliberately emit no provider tool.call afterward.
+  s.say('VoiceStrike location for B148 is empty.', 'u-e2-vs010-code-3');
+  await s.settle(300);
+
+  const afterInventory = endpointCalls.filter((entry) => entry.includes('/api/tools/check-inventory')).length;
+  const afterDiscrepancy = endpointCalls.filter((entry) => entry.includes('/api/tools/report-inventory-discrepancy')).length;
+
+  check('P21 VS-010 READY E2 starts authoritative check_inventory without provider tool selection', afterInventory === beforeInventory + 1, { beforeInventory, afterInventory, endpointCalls });
+  check('P21 VS-010 deterministic E2 continuation records discrepancy without provider orchestration', afterDiscrepancy === beforeDiscrepancy + 1, { beforeDiscrepancy, afterDiscrepancy, endpointCalls });
+}
+
 check('HARNESS no exception inside the provider event pipeline', handlerErrors.length === 0, handlerErrors.slice(0, 3));
 globalThis.fetch = realFetch;
 console.error = realConsoleError;
