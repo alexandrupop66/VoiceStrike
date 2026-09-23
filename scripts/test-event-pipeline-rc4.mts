@@ -554,6 +554,39 @@ async function e2Ready(s: Session): Promise<void> {
   check('P19 VS-009 worker-visible transcript contains no spaced critical IDs', !/\b[BCD](?:\s+\d){2,6}\b/.test(lastAgent), lastAgent);
 }
 
+// P20 / VS-010 — after E2 clarification makes the command READY, an ungrounded provider
+// failure must not be spoken and VoiceStrike must request one code-bound retry that calls check_inventory.
+{
+  const s = await freshSession();
+
+  s.say('VoiceStrike location for 148 is empty.', 'u-vs010-1');
+  const getJob = s.callId();
+  s.reply({ tools: [{ callId: getJob, name: 'get_current_job' }] });
+  await s.settle(120);
+  s.reply({ text: 'Which location for B148 is empty?' });
+  await s.settle();
+
+  s.say('C12.', 'u-vs010-2');
+  const prematureInventory = s.callId();
+  s.reply({ tools: [{ callId: prematureInventory, name: 'check_inventory', args: { component_id: 'B148' } }] });
+  await s.settle(120);
+  s.reply({ text: 'I need to confirm the component for your report. Did you mean component B148?' });
+  await s.settle();
+
+  s.say('VoiceStrike location for B148 is empty.', 'u-vs010-3');
+  const internals = s.agent as unknown as { commandRegistry: { current(): { status?: string; slots?: Record<string, unknown> } | null } };
+  const current = internals.commandRegistry.current();
+  check('P20 VS-010 clarified E2 command is READY with B148/C12', current?.status === 'READY' && current?.slots?.component === 'B148' && current?.slots?.reportedLocation === 'C12', current);
+
+  const mark = telemetry.length;
+  s.reply({ text: 'I am sorry, I could not complete that request.' });
+  await s.settle(180);
+  const lastAgent = [...s.transcripts].reverse().find((entry) => entry.role === 'agent')?.text ?? '';
+  check('P20 VS-010 ungrounded generic failure is rejected', since(mark, 'reliability.reply_claim_rejected').some((t) => t.resultClass === 'UNVERIFIED_FAILURE_CLAIM'), since(mark, 'reliability.reply_claim_rejected'));
+  check('P20 VS-010 worker never receives generic failure loop', !/could not complete that request/i.test(lastAgent), lastAgent);
+  check('P20 VS-010 runtime requests a code-bound E2 retry without another worker turn', s.sentOfType('reply.create').length > 0, s.sentOfType('reply.create'));
+}
+
 check('HARNESS no exception inside the provider event pipeline', handlerErrors.length === 0, handlerErrors.slice(0, 3));
 globalThis.fetch = realFetch;
 console.error = realConsoleError;
