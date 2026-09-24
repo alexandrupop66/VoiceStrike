@@ -304,6 +304,22 @@ export class CommandRegistry {
         command.slots.reportedLocation=clarificationIds[1];
       } else if(pending.field==='component'){
         const component=canonical(resolveCorrectedTechnicalEntity('component_id',text));
+        const expected=command.slots.expectedComponent;
+        if(component && expected && component!==expected && command.slots.observedEmpty===true){
+          // VS-012: after an incomplete component transcript (e.g. STT drops the leading B),
+          // get_current_job may establish expected B148 while the worker's next short answer C12
+          // is the missing location. Preserve C12 as location, but require explicit B148
+          // confirmation before the command can become READY.
+          command.slots.reportedLocation=component;
+          command.fragments.push(text);
+          command.updatedAt=now;
+          command.entityConfirmation={kind:'component_id',expectedValue:expected,status:'PENDING',requestedAt:now};
+          command.pendingClarification=undefined;
+          command.status='COLLECTING';
+          command.phase='CLARIFY';
+          refreshEntities(command);
+          return true;
+        }
         if(!component) return false;
         command.slots.component=component;
       } else if(pending.field==='reportedLocation'){

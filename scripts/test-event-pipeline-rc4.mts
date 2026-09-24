@@ -659,8 +659,11 @@ async function e2Ready(s: Session): Promise<void> {
   const registry = (s.agent as unknown as { commandRegistry: { current(): { status?: string; slots?: Record<string, unknown>; pendingClarification?: { field?: string } } | null } }).commandRegistry;
   const command = registry.current();
   check('P24 VS-012 short C12 binds directly to pending reportedLocation', command?.slots?.reportedLocation === 'C12', command);
-  check('P24 VS-012 short C12 makes the E2 command READY without component reconfirmation',
-    command?.status === 'READY' && command?.pendingClarification === undefined, command);
+  check('P24 VS-012 short C12 clears clarification without component reconfirmation',
+    (command?.status === 'READY' || command?.status === 'COMPLETE') &&
+      command?.pendingClarification === undefined &&
+      command?.slots?.component === 'B148',
+    command);
 }
 
 // P25 / VS-012 — early authoritative read + later C12 must continue deterministically with NO provider tool selection.
