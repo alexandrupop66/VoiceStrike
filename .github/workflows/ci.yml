@@ -1,0 +1,28 @@
+name: VoiceStrike Required Gates
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  required-gates:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        run: npm install --workspaces --include-workspace-root --no-audit --no-fund
+
+      - name: Full regression and production build
+        run: npm run ci:required

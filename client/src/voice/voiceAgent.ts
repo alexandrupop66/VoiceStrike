@@ -16,7 +16,8 @@ import { emitReliabilityTelemetry, setTelemetryEpoch } from '../reliability/tele
 import { classifyToolReporting } from '../reliability/toolReporting.js';
 import { isRecoverySpeechContextFresh, makeRecoverySpeechContext, type RecoverySpeechContext } from '../reliability/recovery.js';
 import { ProtectedSpeechWindowRegistry } from '../reliability/protectedSpeech.js';
-import { assessAgentReplyClaims } from '../reliability/replyClaims.js';
+import { assessAgentReplyClaims, type ReversalSpeechAuthority } from '../reliability/replyClaims.js';
+import { normalizeSpokenTechnicalIds } from '../reliability/spokenIds.js';
 
 export type VoiceStatus =
   | 'idle'
@@ -63,7 +64,7 @@ type PendingTool = {
 };
 
 /** RC5: code-owned protected reversal stage (the LLM narrates; code decides and executes). */
-type CodeOwnedStage = 'PREPARE' | 'CONFIRM';
+type CodeOwnedStage = 'PREPARE' | 'CONFIRM' | 'E2';
 type CodeOwnedAction = {
   key: string;
   syntheticCallId: string;
@@ -287,6 +288,20 @@ export class VoiceAgentClient {
   private userDeltaCount = 0;
   // RC5: code-owned protected actions keyed by `${turnId}|${commandId}`.
   private readonly codeOwned = new Map<string, CodeOwnedAction>();
+  // VS-001: command-bound authority for what E3 CONFIRM is allowed to say about its outcome.
+  private readonly reversalSpeechAuthority = new Map<string, ReversalSpeechAuthority>();
+  // VS-010: command-bound speech authority while code owns the deterministic E2 read/continuation.
+  private readonly e2SpeechAuthority = new Map<string, ReversalSpeechAuthority>();
+  // VS-012: when a provider reply fails to ask the exact pending E2 clarification, code owns
+  // the replacement content. The provider is used only to render that exact prompt as speech.
+  private pendingCodeClarification: {
+    commandId: string;
+    turnId: string;
+    key: string;
+    prompt: string;
+    requested: boolean;
+    attempts: number;
+  } | null = null;
   // RC5: sentence-level streaming claim gate state for the reply in progress.
   private gatedAudio: Int16Array[] = [];
   private gatedBufferedSamples = 0;
@@ -911,6 +926,17 @@ export class VoiceAgentClient {
           componentId: criticalTrust.componentId ?? command.entities.find((entity) => entity.kind === 'component_id')?.canonicalValue ?? null,
         });
 
+        // VS-010: once E2 owns component + reported location + explicit EMPTY, code owns the
+        // authoritative inventory read and deterministic continuation. The provider may narrate or
+        // join the read, but it is no longer required to choose check_inventory correctly.
+        if (!cancellation.cancel && command.workflow === 'E2_MISSING_INVENTORY' && command.status === 'READY' &&
+          command.slots.observedEmpty === true && command.slots.component && command.slots.reportedLocation &&
+          !command.evidence.discrepancy) {
+          // VS-012: READY is the deterministic ownership transition. Even if a read occurred while
+          // COLLECTING, code performs a fresh command-bound read here before any mutation.
+          this.startCodeOwnedE2(id, command.id);
+        }
+
         if (criticalTrust.critical && protectedWindowDecision?.trusted) {
           const consumedWindow = this.protectedSpeechWindows.consume(protectedWindowDecision.window.id);
           if (consumedWindow) {
@@ -1016,10 +1042,19 @@ export class VoiceAgentClient {
         const commandId = this.commandRegistry.beginReply(binding.authorised ? binding.commandId : null);
         this.replyClaimCommandId = binding.authorised ? binding.commandId : null;
         const replyWorkflow = this.replyClaimCommandId ? this.commandRegistry.workflowFor(this.replyClaimCommandId) : null;
+        const replyCommand = this.replyClaimCommandId ? this.commandRegistry.get(this.replyClaimCommandId) : null;
+        const e2NeedsLocation = replyCommand?.workflow === 'E2_MISSING_INVENTORY'
+          && replyCommand.pendingClarification?.field === 'reportedLocation'
+          && Boolean(replyCommand.slots.component);
         this.replyClaimMode = binding.authorised && (replyWorkflow === 'E1_WRONG_COMPONENT' || replyWorkflow === 'E2_MISSING_INVENTORY' || replyWorkflow === 'E3_MISTAKEN_SCAN')
           ? 'BUFFER'
           : binding.authorised ? 'ALLOW' : 'BLOCK';
-        this.resetClaimGate(this.replyClaimMode === 'BUFFER' ? 'STREAM_GATE' : this.replyClaimMode === 'ALLOW' ? 'ALLOW' : 'BLOCK', receivedAt);
+        this.resetClaimGate(
+          this.replyClaimMode === 'BUFFER'
+            ? (e2NeedsLocation ? 'FULL_BUFFER' : 'STREAM_GATE')
+            : this.replyClaimMode === 'ALLOW' ? 'ALLOW' : 'BLOCK',
+          receivedAt,
+        );
         // Latency stage: response start, kept separate from the causality binding below.
         emitReliabilityTelemetry({
           event: 'reliability.response_started',
@@ -1078,9 +1113,12 @@ export class VoiceAgentClient {
           this.gatedMode = 'FULL_BUFFER';
         }
         this.gatedDeltaText = /^[.,!?;:'")\]]/.test(delta) || !this.gatedDeltaText ? `${this.gatedDeltaText}${delta}` : `${this.gatedDeltaText} ${delta}`;
+        if (this.gatedMode === 'FULL_BUFFER') break;
         if (!this.gatedDeltaTimingOk || endMs == null || !/[.!?]["')\]]?$/.test(delta.trim())) break;
         const command = this.replyClaimCommandId ? this.commandRegistry.get(this.replyClaimCommandId) : null;
-        const decision = assessAgentReplyClaims(this.gatedDeltaText, command);
+        const reversalAuthority = this.replyClaimCommandId ? this.reversalSpeechAuthority.get(this.replyClaimCommandId) ?? null : null;
+        const e2Authority = this.replyClaimCommandId ? this.e2SpeechAuthority.get(this.replyClaimCommandId) ?? null : null;
+        const decision = assessAgentReplyClaims(this.gatedDeltaText, command, reversalAuthority, e2Authority);
         if (!decision.allowed) {
           this.blockGatedReply(decision, this.gatedDeltaText, 'SENTENCE');
           break;
@@ -1103,25 +1141,58 @@ export class VoiceAgentClient {
           // Final full-text check: covers replies without word timing (FULL_BUFFER fallback) and
           // any claim split across sentence boundaries. Already-released sentences passed the gate.
           const command = this.replyClaimCommandId ? this.commandRegistry.get(this.replyClaimCommandId) : null;
-          const claimDecision = assessAgentReplyClaims(text, command);
+          const reversalAuthority = this.replyClaimCommandId ? this.reversalSpeechAuthority.get(this.replyClaimCommandId) ?? null : null;
+          const e2Authority = this.replyClaimCommandId ? this.e2SpeechAuthority.get(this.replyClaimCommandId) ?? null : null;
+          const claimDecision = assessAgentReplyClaims(text, command, reversalAuthority, e2Authority);
           if (!claimDecision.allowed) {
             this.blockGatedReply(claimDecision, text, 'FINAL');
             break;
+          }
+          const pendingE2Component = command?.workflow === 'E2_MISSING_INVENTORY'
+            && command.pendingClarification?.field === 'reportedLocation'
+            ? String(command.slots.component ?? '').trim().toUpperCase()
+            : '';
+          if (pendingE2Component) {
+            const normalizedReply = normalizeSpokenTechnicalIds(text);
+            const asksMissingLocation = new RegExp(
+              `\\b(?:which|what)\\s+location\\b[\\s\\S]{0,80}\\b${pendingE2Component}\\b[\\s\\S]{0,80}\\bempty\\b`,
+              'i',
+            ).test(normalizedReply);
+            if (!asksMissingLocation) {
+              this.blockGatedReply(
+                { code: 'REQUIRED_CLARIFICATION', detail: `E2 still requires reportedLocation for ${pendingE2Component}; a truthful inventory read cannot close the worker clarification.` },
+                text,
+                'FINAL',
+              );
+              break;
+            }
           }
           this.replyClaimMode = 'ALLOW';
           this.gatedReleaseLimitSamples = Number.POSITIVE_INFINITY;
           this.releaseGatedAudio();
         }
 
-        // Only audio/text that passed the deterministic claim gate can become echo context.
+        // Keep the raw provider wording as echo context because it matches the audio that was
+        // actually rendered, but canonicalise technical IDs in the worker-visible final transcript.
         this.duplexGuard.noteAgentText(text);
-        this.callbacks.onTranscript({
-          id: makeId('agent'),
-          role: 'agent',
-          text,
-          final: true,
-          interrupted: Boolean(message.interrupted),
-        });
+        const workerVisibleText = normalizeSpokenTechnicalIds(text);
+        const codeClarification = this.pendingCodeClarification;
+        const isCodeClarificationEcho = Boolean(
+          codeClarification?.requested &&
+          this.replyAuthority.current()?.reason === 'CODE_CONTINUATION' &&
+          workerVisibleText.trim().toLowerCase().replace(/[?.!]+$/g, '') === codeClarification.prompt.trim().toLowerCase().replace(/[?.!]+$/g, ''),
+        );
+        // blockGatedReply already surfaced the deterministic safe transcript once. The
+        // CODE_CONTINUATION exists to render that exact line audibly, not duplicate the UI row.
+        if (!isCodeClarificationEcho) {
+          this.callbacks.onTranscript({
+            id: makeId('agent'),
+            role: 'agent',
+            text: workerVisibleText,
+            final: true,
+            interrupted: Boolean(message.interrupted),
+          });
+        }
         break;
       }
 
@@ -1179,6 +1250,14 @@ export class VoiceAgentClient {
         this.commandRegistry.finishReply();
         const finishedBinding = this.replyAuthority.finishReply();
         const suppressed = !finishedBinding?.authorised;
+
+        if (finishedBinding?.authorised && finishedBinding.reason === 'CODE_CONTINUATION' &&
+          this.pendingCodeClarification?.requested &&
+          this.pendingCodeClarification.commandId === finishedBinding.commandId) {
+          this.pendingCodeClarification = null;
+        } else if (this.pendingCodeClarification && String(message.status ?? '') !== 'interrupted') {
+          this.schedulePendingClarificationDelivery(0);
+        }
 
         const pendingWindow = this.protectedSpeechWindows.current();
         if (pendingWindow?.state === 'AWAITING_PROMPT_DONE' &&
@@ -1326,7 +1405,11 @@ export class VoiceAgentClient {
 
     // RC5: a provider reverse_last_scan for a command whose protected step is already owned by code
     // joins that execution. It can never start a second preparation or a second mutation.
-    const joined = !internal && name === 'reverse_last_scan' && commandId ? this.codeOwnedFor(commandId) : null;
+    const candidateOwned = !internal && commandId ? this.codeOwnedFor(commandId) : null;
+    const joined = candidateOwned && (
+      (candidateOwned.stage === 'E2' && name === 'check_inventory') ||
+      (candidateOwned.stage !== 'E2' && name === 'reverse_last_scan')
+    ) ? candidateOwned : null;
     if (joined) {
       joined.providerCallSeen = true;
       if (!joined.deliveredVia) joined.deliveredVia = 'TOOL';
@@ -1999,6 +2082,50 @@ export class VoiceAgentClient {
    * tool.call: TurnAuthority, critical trust, workflow, CriticalConfirmationGate, single mutation
    * consumption, executeVerifiedAction and independent verification.
    */
+  private startCodeOwnedE2(turnId: string, commandId: string): void {
+    const key = `${turnId}|${commandId}`;
+    if (this.codeOwned.has(key)) return;
+    const command = this.commandRegistry.get(commandId);
+    if (!command || command.workflow !== 'E2_MISSING_INVENTORY' || command.status !== 'READY' ||
+      command.slots.observedEmpty !== true || !command.slots.component || !command.slots.reportedLocation ||
+      command.evidence.discrepancy) return;
+
+    const entry: CodeOwnedAction = {
+      key,
+      syntheticCallId: `code-e2-${turnId}`,
+      commandId,
+      turnId,
+      stage: 'E2',
+      actionId: `E2:${command.slots.reportedLocation}`,
+      componentId: command.slots.component,
+      startedAt: Date.now(),
+      result: null,
+      waiters: [],
+      providerCallSeen: false,
+      deliveredVia: null,
+      initialReplyDoneAt: null,
+      deliveryAttempts: 0,
+    };
+    this.codeOwned.set(key, entry);
+    this.e2SpeechAuthority.set(commandId, { state: 'PENDING' });
+    this.replyAuthority.holdCodeWork(commandId, entry.syntheticCallId);
+    emitReliabilityTelemetry({
+      event: 'reliability.code_owned_action_started',
+      sessionId: this.sessionId,
+      turnId,
+      commandId,
+      componentId: entry.componentId,
+      resultClass: 'E2',
+      detail: `code_call=${entry.syntheticCallId}; reported_location=${command.slots.reportedLocation}; provider check_inventory not required`,
+    });
+    void this.handleToolCall(
+      { call_id: entry.syntheticCallId, name: 'check_inventory', arguments: { component_id: entry.componentId } },
+      { commandId, codeOwned: entry },
+    ).catch((error: unknown) => {
+      console.error('[VoiceStrike] code-owned E2 action failed', error);
+    });
+  }
+
   private startCodeOwnedProtectedAction(turnId: string, commandId: string, stage: CodeOwnedStage): void {
     const key = `${turnId}|${commandId}`;
     if (this.codeOwned.has(key)) return;
@@ -2021,6 +2148,9 @@ export class VoiceAgentClient {
         detail: stage === 'PREPARE' ? 'no command-bound recovery context' : 'no PREPARED action for this command',
       });
       return;
+    }
+    if (stage === 'CONFIRM') {
+      this.reversalSpeechAuthority.set(commandId, { state: 'PENDING' });
     }
     const entry: CodeOwnedAction = {
       key,
@@ -2063,6 +2193,26 @@ export class VoiceAgentClient {
     const waiters = entry.waiters.splice(0);
     for (const resolve of waiters) resolve(completed);
     const record = completed.result && typeof completed.result === 'object' ? completed.result as Record<string, unknown> : {};
+    if (entry.stage === 'CONFIRM') {
+      const outcome = String(record.reliability_outcome ?? record.error ?? 'UNKNOWN_ACTION_STATE') as ReversalSpeechAuthority['outcome'];
+      this.reversalSpeechAuthority.set(entry.commandId, { state: 'FINAL', outcome, verified: record.verified === true });
+    } else if (entry.stage === 'E2') {
+      const workflow = record.deterministic_workflow && typeof record.deterministic_workflow === 'object'
+        ? record.deterministic_workflow as Record<string, unknown>
+        : null;
+      const discrepancy = workflow?.discrepancy && typeof workflow.discrepancy === 'object'
+        ? workflow.discrepancy as Record<string, unknown>
+        : null;
+      const alternative = workflow?.alternative && typeof workflow.alternative === 'object'
+        ? workflow.alternative as Record<string, unknown>
+        : null;
+      const complete = workflow?.completed === true && discrepancy?.ok === true && alternative?.ok === true;
+      this.e2SpeechAuthority.set(entry.commandId, {
+        state: 'FINAL',
+        outcome: complete ? 'VERIFIED_SUCCESS' : 'UNKNOWN_ACTION_STATE',
+        verified: complete,
+      });
+    }
     emitReliabilityTelemetry({
       event: 'reliability.code_owned_action_completed',
       sessionId: this.sessionId,
@@ -2148,6 +2298,26 @@ export class VoiceAgentClient {
   private codeOwnedFacts(entry: CodeOwnedAction): string {
     const record = entry.result?.result && typeof entry.result.result === 'object' ? entry.result.result as Record<string, unknown> : {};
     const outcome = String(record.reliability_outcome ?? record.error ?? 'UNKNOWN');
+    if (entry.stage === 'E2') {
+      const workflow = record.deterministic_workflow && typeof record.deterministic_workflow === 'object'
+        ? record.deterministic_workflow as Record<string, unknown>
+        : null;
+      const alternativePayload = workflow?.alternative && typeof workflow.alternative === 'object'
+        ? workflow.alternative as Record<string, unknown>
+        : null;
+      const alternative = alternativePayload?.alternative && typeof alternativePayload.alternative === 'object'
+        ? alternativePayload.alternative as Record<string, unknown>
+        : null;
+      const discrepancy = workflow?.discrepancy && typeof workflow.discrepancy === 'object'
+        ? workflow.discrepancy as Record<string, unknown>
+        : null;
+      if (workflow?.completed === true && discrepancy?.ok === true && alternativePayload?.ok === true && alternative) {
+        const location = String(alternative.location ?? '');
+        const quantity = Number(alternative.quantity ?? 0);
+        return `VoiceStrike verified the reported empty primary location, logged the inventory discrepancy, and found ${quantity} ${entry.componentId} at location ${location}. Report exactly those verified facts.`;
+      }
+      return `VoiceStrike could not complete the verified missing-inventory workflow for ${entry.componentId}. Do not claim that a discrepancy was logged or that alternative stock was found.`;
+    }
     if (entry.stage === 'PREPARE' && record.error === 'SECOND_CONFIRMATION_REQUIRED') {
       return `VoiceStrike prepared the reversal of scan ${entry.actionId} for component ${entry.componentId}. Nothing has changed yet. Ask the worker to say exactly: "VoiceStrike, confirm reverse scan ${entry.componentId}".`;
     }
@@ -2171,7 +2341,7 @@ export class VoiceAgentClient {
   // RC5 — sentence-level streaming claim gate
   // ------------------------------------------------------------------------------------------
 
-  private resetClaimGate(mode: 'STREAM_GATE' | 'ALLOW' | 'BLOCK', startedAt: number): void {
+  private resetClaimGate(mode: 'STREAM_GATE' | 'FULL_BUFFER' | 'ALLOW' | 'BLOCK', startedAt: number): void {
     this.gatedAudio = [];
     this.gatedBufferedSamples = 0;
     this.gatedReleasedSamples = 0;
@@ -2217,10 +2387,113 @@ export class VoiceAgentClient {
       resultClass: decision.code,
       detail: `${decision.detail ?? ''}; stage=${stage}; released_ms=${Math.round(this.gatedReleasedSamples / SAMPLES_PER_MS)}; reply_binding=${this.replyAuthority.current()?.reason ?? 'none'}:${this.replyAuthority.current()?.replyId ?? '-'}; workflow=${command?.workflow ?? 'none'}; evidence=${command ? Object.keys(command.evidence).join(',') || 'none' : 'none'}; rejected_text=${text.slice(0, 300)}`,
     });
-    const safeText = 'I could not verify that operational result. Please repeat the request.';
+    const reversalAuthority = this.replyClaimCommandId ? this.reversalSpeechAuthority.get(this.replyClaimCommandId) ?? null : null;
+    const e2Authority = this.replyClaimCommandId ? this.e2SpeechAuthority.get(this.replyClaimCommandId) ?? null : null;
+    const e2Entry = this.replyClaimCommandId ? this.codeOwnedFor(this.replyClaimCommandId) : null;
+    const e2LocationClarification = command?.workflow === 'E2_MISSING_INVENTORY'
+      && command.pendingClarification?.field === 'reportedLocation'
+      && command.slots.component
+        ? `Which location for ${command.slots.component} is empty?`
+        : null;
+    const safeText = decision.code === 'CONTRADICTS_VERIFIED_RESULT' && reversalAuthority?.state === 'FINAL' && reversalAuthority.outcome === 'VERIFIED_SUCCESS' && reversalAuthority.verified === true
+      ? 'The reversal was completed and independently verified.'
+      : decision.code === 'UNVERIFIED_FAILURE_CLAIM' && reversalAuthority?.state === 'PENDING'
+        ? 'The reversal result is still being verified.'
+        : command?.workflow === 'E2_MISSING_INVENTORY' && e2Authority?.state === 'PENDING'
+          ? 'The inventory result is still being verified.'
+          : command?.workflow === 'E2_MISSING_INVENTORY' && e2Authority?.state === 'FINAL' && e2Authority.outcome === 'VERIFIED_SUCCESS' && e2Entry?.result
+            ? this.codeOwnedFacts(e2Entry)
+            : e2LocationClarification
+              ?? 'I could not verify that operational result. Please repeat the request.';
     this.callbacks.onTranscript({ id: makeId('agent-safe'), role: 'agent', text: safeText, final: true });
+
+    if (decision.code === 'REQUIRED_CLARIFICATION' && e2LocationClarification && command?.id && this.lastFinalTurnId) {
+      const key = `clarify-${this.lastFinalTurnId}-${command.id}`;
+      const existing = this.pendingCodeClarification;
+      if (!existing || existing.commandId !== command.id || existing.turnId !== this.lastFinalTurnId) {
+        this.pendingCodeClarification = {
+          commandId: command.id,
+          turnId: this.lastFinalTurnId,
+          key,
+          prompt: e2LocationClarification,
+          requested: false,
+          attempts: 0,
+        };
+        this.replyAuthority.holdCodeWork(command.id, key);
+      }
+    }
+
     this.callbacks.onStatus('ready', `Unsafe operational claim suppressed (${decision.code ?? 'UNVERIFIED'}).`);
-    this.sendProviderContextNote('Your last statement was not supported by verified VoiceStrike evidence and was not played to the worker. Do not repeat it. Only state facts present in tool results.');
+    const providerCorrection = reversalAuthority?.state === 'FINAL' && reversalAuthority.outcome === 'VERIFIED_SUCCESS' && reversalAuthority.verified === true
+      ? 'Your last statement contradicted the authoritative VoiceStrike result and was not played to the worker. The reversal is VERIFIED_SUCCESS and independently verified. Do not state or imply failure.'
+      : reversalAuthority?.state === 'PENDING'
+        ? 'Your last statement claimed an E3 outcome before VoiceStrike had an authoritative result and was not played to the worker. Do not state success or failure until the result arrives.'
+        : command?.workflow === 'E2_MISSING_INVENTORY' && e2Authority?.state === 'PENDING'
+          ? 'Your last statement claimed E2 failure while VoiceStrike code is still verifying the authoritative inventory workflow and was not played to the worker. Do not claim success or failure until the code-owned result arrives.'
+          : command?.workflow === 'E2_MISSING_INVENTORY' && e2Authority?.state === 'FINAL' && e2Authority.outcome === 'VERIFIED_SUCCESS' && e2Entry?.result
+            ? `Your last statement contradicted the verified E2 result and was not played to the worker. ${this.codeOwnedFacts(e2Entry)}`
+            : e2LocationClarification
+              ? `Your last statement was not permitted to close the worker clarification. It may contain verified read facts, but the active E2 command is still missing only reportedLocation. Ask only: "${e2LocationClarification}" Do not infer the worker-observed location from system inventory.`
+              : 'Your last statement was not supported by verified VoiceStrike evidence and was not played to the worker. Do not repeat it. Only state facts present in tool results.';
+    this.sendProviderContextNote(providerCorrection);
+  }
+
+  private schedulePendingClarificationDelivery(delayMs = 0): void {
+    setTimeout(() => this.enqueueInternal(() => this.tryDeliverPendingClarification()), Math.max(0, delayMs));
+  }
+
+  private tryDeliverPendingClarification(): void {
+    const pending = this.pendingCodeClarification;
+    if (!pending || pending.requested) return;
+
+    const command = this.commandRegistry.get(pending.commandId);
+    const stillNeeded = command?.workflow === 'E2_MISSING_INVENTORY'
+      && command.status === 'COLLECTING'
+      && command.pendingClarification?.field === 'reportedLocation'
+      && Boolean(command.slots.component);
+
+    if (!stillNeeded || this.turnAuthorities.current()?.turnId !== pending.turnId) {
+      this.replyAuthority.releaseCodeWork(pending.key);
+      this.pendingCodeClarification = null;
+      return;
+    }
+
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN ||
+      !this.replyAuthority.canRequestCodeReply(pending.commandId, pending.key)) {
+      pending.attempts += 1;
+      if (pending.attempts < CODE_DELIVERY_MAX_ATTEMPTS) {
+        this.schedulePendingClarificationDelivery(CODE_DELIVERY_RETRY_MS);
+      } else {
+        this.replyAuthority.releaseCodeWork(pending.key);
+        emitReliabilityTelemetry({
+          event: 'reliability.code_owned_action_delivered',
+          sessionId: this.sessionId,
+          turnId: pending.turnId,
+          commandId: pending.commandId,
+          resultClass: 'E2_CLARIFICATION:CONTEXT_ONLY',
+          detail: 'Deterministic clarification could not obtain a safe provider reply slot.',
+        });
+        this.pendingCodeClarification = null;
+      }
+      return;
+    }
+
+    this.sendProviderContextNote(`VoiceStrike requires exactly this worker clarification: "${pending.prompt}" Do not add inventory facts, suggestions, or tool calls.`);
+    this.replyAuthority.expectCodeReply(pending.commandId);
+    this.replyAuthority.releaseCodeWork(pending.key);
+    pending.requested = true;
+    this.ws.send(JSON.stringify({
+      type: 'reply.create',
+      instructions: `Say exactly: "${pending.prompt}" Do not add any other words and do not call a tool.`,
+    }));
+    emitReliabilityTelemetry({
+      event: 'reliability.code_owned_action_delivered',
+      sessionId: this.sessionId,
+      turnId: pending.turnId,
+      commandId: pending.commandId,
+      resultClass: 'E2_CLARIFICATION:CODE_REPLY',
+      detail: pending.prompt,
+    });
   }
 
   private noteFirstAudible(): void {
@@ -2320,6 +2593,9 @@ export class VoiceAgentClient {
     this.callReplyIds.clear();
     this.currentProviderReplyId = null;
     this.codeOwned.clear();
+    this.reversalSpeechAuthority.clear();
+    this.e2SpeechAuthority.clear();
+    this.pendingCodeClarification = null;
     this.userItemVerdicts.clear();
     this.interruptedCallIds.clear();
     this.gatedAudio = [];

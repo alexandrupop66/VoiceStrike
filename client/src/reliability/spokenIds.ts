@@ -60,11 +60,17 @@ export function findTechnicalIds(text: string): SpokenIdMatch[] {
       const next = tokens[j + 1];
       const nextIsCue = Boolean(next && joinable(text, token, next) && QUANTITY_CUE.test(next.text));
       if (/^\d+$/.test(token.text)) {
-        if (mode !== 'none') break;          // "D05 4 units": a second digit group is a quantity
+        // Once an ID already owns 2+ digits, a following number immediately before a count noun
+        // is a quantity, not another part of the identifier: "D 0 5 4 units" -> D05 + 4 units.
+        if (nextIsCue && digits.length >= 2) break;
+        if (mode === 'words') break;
         mode = 'numeric';
         digits += token.text;
         j += 1;
-        break;                               // compact digit group is complete
+        // A multi-digit token is already a compact numeric group ("B 148"). A single digit may
+        // continue across whitespace/hyphens so provider forms like "B 1 4 8" become B148.
+        if (token.text.length > 1) break;
+        continue;
       }
       if (nextIsCue && digits.length >= 2) break; // "D zero five four units": "four" is the quantity
       if (DIGIT_WORDS[lower] !== undefined) {

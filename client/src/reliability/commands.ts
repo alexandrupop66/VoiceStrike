@@ -292,8 +292,53 @@ export class CommandRegistry {
       const comp=canonical(resolvedComponent(text)); if(!comp) return false; command.fragments.push(text); command.updatedAt=now; command.slots.observedComponent=comp; command.pendingClarification=undefined; command.status='READY'; command.phase='VERIFY'; refreshEntities(command); return true;
     }
     if(command.workflow==='E2_MISSING_INVENTORY'){
-      const combined=`${commandContext(command)} ${text}`.trim(); const typed=resolveInventoryDiscrepancyEntities(combined); const component=canonical(typed.component); const location=canonical(typed.location);
-      if(component)command.slots.component=component; if(location)command.slots.reportedLocation=location; if(typed.observedEmpty)command.slots.observedEmpty=true;
+      // VS-012: the pending field owns the interpretation of a short clarification.
+      // Component/location IDs intentionally share lexical shape, so reparsing the whole
+      // accumulated command makes a standalone "C12" ambiguous with the earlier B148.
+      // Only the new utterance is interpreted, using pending.allowedType as deterministic type.
+      const clarificationIds=extractTechnicalIds(text,'component_id');
+      if(command.slots.observedEmpty===true && clarificationIds.length===2 && pending.field==='component'){
+        // Narrow complete-pair clarification: the worker supplied both missing IDs in this turn.
+        // Ordered pair semantics are allowed only because EMPTY was already explicit on this E2.
+        command.slots.component=clarificationIds[0];
+        command.slots.reportedLocation=clarificationIds[1];
+      } else if(pending.field==='component'){
+        const component=canonical(resolveCorrectedTechnicalEntity('component_id',text));
+        const expected=command.slots.expectedComponent;
+        if(component && expected && component!==expected && command.slots.observedEmpty===true){
+          // VS-012: after an incomplete component transcript (e.g. STT drops the leading B),
+          // get_current_job may establish expected B148 while the worker's next short answer C12
+          // is the missing location. Preserve C12 as location, but require explicit B148
+          // confirmation before the command can become READY.
+          command.slots.reportedLocation=component;
+          command.fragments.push(text);
+          command.updatedAt=now;
+          command.entityConfirmation={kind:'component_id',expectedValue:expected,status:'PENDING',requestedAt:now};
+          command.pendingClarification=undefined;
+          command.status='COLLECTING';
+          command.phase='CLARIFY';
+          refreshEntities(command);
+          return true;
+        }
+        if(!component) return false;
+        command.slots.component=component;
+      } else if(pending.field==='reportedLocation'){
+        let location=canonical(resolveCorrectedTechnicalEntity('location_id',text));
+        if(!location){
+          // A worker may answer with the complete pair ("B148, C12"). Interpret only this
+          // clarification utterance: if one ID is the command-owned component, the single
+          // remaining ID is the requested location.
+          const ids=extractTechnicalIds(text,'location_id');
+          const remaining=command.slots.component ? ids.filter((id)=>id!==command.slots.component) : ids;
+          if(remaining.length===1) location=remaining[0];
+        }
+        if(!location) return false;
+        command.slots.reportedLocation=location;
+      } else if(pending.field==='observedEmpty'){
+        if(!/\b(?:empty|yes|correct|right)\b/i.test(normalizedPhrase(text))) return false;
+        command.slots.observedEmpty=true;
+      } else return false;
+
       command.fragments.push(text); command.updatedAt=now;
       if(!command.slots.component) command.pendingClarification={workflow:command.workflow,field:'component',allowedType:'component_id'};
       else if(!command.slots.reportedLocation) command.pendingClarification={workflow:command.workflow,field:'reportedLocation',allowedType:'location_id'};

@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
-const read = (p) => readFileSync(resolve(root, p), 'utf8');
+const read = (p) => readFileSync(resolve(root, p), 'utf8').replace(/\r\n/g, '\n');
 const checks = [];
 const check = (label, ok) => {
   checks.push([label, Boolean(ok)]);
@@ -167,13 +167,19 @@ check('Unrelated ambient speech does not extend wake window', ambient.includes('
 // per-reply immutable binding that a later reply boundary cannot clear.
 check('Mutable session suppression flag is gone', !voice.includes('suppressAmbientReply'));
 check('Replies are bound to the accepted turn that caused them', voice.includes('this.replyAuthority.beginReply(replyId, this.epochs.current())') && voice.includes('TURN_AUTHORITY_REQUIRED'));
-check('Orphan replies are never audible and operational PCM is claim-gated', voice.includes('if (!audio || !this.replyAuthority.isCurrentReplyAuthorised()) break;') && voice.includes("this.replyClaimMode === 'BUFFER'") && voice.includes('assessAgentReplyClaims(text, command)') && voice.includes('this.gatedAudio = [];') && voice.includes('if (!text || !authorised) break;'));
+check('Orphan replies are never audible and operational PCM is claim-gated',
+  voice.includes('if (!audio || !this.replyAuthority.isCurrentReplyAuthorised()) break;') &&
+  voice.includes("this.replyClaimMode === 'BUFFER'") &&
+  voice.includes('assessAgentReplyClaims(text, command, reversalAuthority, e2Authority)') &&
+  voice.includes('this.gatedAudio = [];') &&
+  voice.includes('if (!text || !authorised) break;'));
 check('RC4 speech onset is recorded without revoking the reply in progress', voice.includes('this.replyAuthority.interruptCurrentReply(this.lastSpeechStartedAt)') && replyAuthority.includes('interruptCurrentReply(now = Date.now())') && replyAuthority.includes('onsetDuringReplyAt') && !replyAuthority.includes('delayedToolOwner'));
 check('RC4 no stale tail and no rehydration over a newer accepted turn', !replyAuthority.includes('delayedToolOwner') && replyAuthority.includes('this.lingering = null;') && replyAuthority.includes("if (!turn.initialReplyStarted) return null;"));
 check('Mutation requests carry typed workflow and command-ready headers', voice.includes('X-VoiceStrike-Workflow') && voice.includes('X-VoiceStrike-Command-Ready'));
 check('E2 complete typed EMPTY report continues deterministically in code', voice.includes('continueDeterministicE2(') && voice.includes("const mutationName: MutationToolName = 'report_inventory_discrepancy'") && voice.includes("const altName = 'find_alternative_inventory'"));
 check('E2 deterministic continuation records authoritative alternative before completion', voice.includes('this.noteAuthoritativeRead(commandId, altName, altArgs, altPayload)') && voice.includes('this.commandRegistry.markComplete(commandId)'));
 check('Final operational speech claim gate exists', replyClaims.includes('assessAgentReplyClaims') && replyClaims.includes('UNAUTHORISED_LOCATION_CLAIM') && replyClaims.includes('UNAUTHORISED_QUANTITY_CLAIM') && replyClaims.includes('UNVERIFIED_MUTATION_CLAIM'));
+check('VS-001 E3 reply gate is bidirectional against authoritative outcome', replyClaims.includes('UNVERIFIED_FAILURE_CLAIM') && replyClaims.includes('CONTRADICTS_VERIFIED_RESULT') && voice.includes('reversalSpeechAuthority') && voice.includes("state: 'PENDING'") && voice.includes("state: 'FINAL'"));
 check('False operational PCM is dropped before reaching worker', voice.includes("this.replyClaimMode = 'BLOCK'") && voice.includes('Unsafe operational claim suppressed') && voice.includes('private releaseGatedAudio(): void'));
 // RC5
 const spokenIds = read('client/src/reliability/spokenIds.ts');
@@ -181,7 +187,10 @@ check('RC5 claim gate normalises spoken IDs and parses quantities with IDs maske
 check('RC5 PCM is released per validated sentence, with full-buffer fallback when word timing is missing', voice.includes("case 'transcript.agent.delta': {") && voice.includes('Math.round(endMs * SAMPLES_PER_MS)') && voice.includes("this.gatedMode = 'FULL_BUFFER';"));
 check('RC5 trusted PREPARE/CONFIRM are executed by code from authoritative state', voice.includes('this.startCodeOwnedProtectedAction(id, command.id,') && voice.includes("if (ctx && ctx.commandId === commandId) { actionId = ctx.actionId; componentId = ctx.componentId; }") && voice.includes("if (pending && pending.preparedCommandId === commandId) { actionId = pending.actionId; componentId = pending.componentId; }"));
 check('RC5 code-owned execution runs through the same gated tool path', voice.includes("{ call_id: entry.syntheticCallId, name: 'reverse_last_scan', arguments: { action_id: actionId, component_id: componentId } },") && voice.includes('internal ? internal.commandId : this.replyAuthority.commandIdForToolRequest(name)'));
-check('RC5 provider reverse_last_scan joins code execution (no second mutation)', voice.includes('const joined = !internal && name === \'reverse_last_scan\' && commandId ? this.codeOwnedFor(commandId) : null;'));
+check('RC5 provider reverse_last_scan joins code execution (no second mutation)',
+  voice.includes("const candidateOwned = !internal && commandId ? this.codeOwnedFor(commandId) : null;") &&
+  voice.includes("candidateOwned.stage !== 'E2' && name === 'reverse_last_scan'") &&
+  voice.includes("? candidateOwned : null;"));
 check('RC5 code outcome delivered by conversation.message + reply.create only when nothing is owed', voice.includes("type: 'reply.create'") && voice.includes("type: 'conversation.message', role: 'system'") && voice.includes('this.replyAuthority.canRequestCodeReply(entry.commandId, entry.syntheticCallId)'));
 check('RC5 provider correlation can only downgrade reply authority', voice.includes("this.replyAuthority.demoteCurrentReply('PROVIDER_ITEM_REJECTED')") && replyAuthority.includes('demoteCurrentReply('));
 check('RC5 interrupted fc-<call_id> replies discard their call result', voice.includes("providerReplyId.startsWith('fc-')") && voice.includes('this.interruptedCallIds.has(tool.callId)'));

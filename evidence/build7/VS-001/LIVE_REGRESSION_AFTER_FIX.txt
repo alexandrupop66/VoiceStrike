@@ -1,0 +1,32 @@
+(node:1913) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///mnt/data/voicestrike-forensic/voicestrike-build7/.test-regression2/client/src/reliability/commands.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /mnt/data/voicestrike-forensic/voicestrike-build7/.test-regression2/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS  LIVE first greeting is greeting-only authority
+PASS  LIVE interrupted greeting gives no tool owner before new reply
+PASS  LIVE first operational reply binds first worker command
+PASS  LIVE first job tool is owned by first worker command
+PASS  LIVE delayed-tool setup binds E2 reply
+PASS  LIVE delayed ordinary tool is owned by the same lingering turn
+PASS  LIVE delayed ordinary tool reopens its own (not a newer) causal turn
+PASS  LIVE delayed tool result continuation returns to exact E2 command
+PASS  LIVE protected reverse tool lease outranks stale reply binding
+PASS  LIVE E1 clarification stays in same command
+PASS  LIVE E1 clarification fills only observedComponent
+PASS  LIVE E1 check_component uses typed B184
+PASS  LIVE mutation guard no longer requires semantic keyword in transcript
+PASS  LIVE mutation guard requires typed workflow
+PASS  LIVE mutation guard requires command readiness
+PASS  LIVE E2 exact sentence is READY without yes/no clarification
+PASS  LIVE E2 slots are typed B148/C12/EMPTY
+PASS  LIVE E2 discrepancy args cannot be replaced by model text
+PASS  LIVE E2 orchestration is code-owned after authoritative check
+PASS  LIVE E2 alternative result is recorded before command completion
+PASS  LIVE D05/4 claim is blocked without alternative read
+PASS  LIVE D05/4 claim is allowed only after exact alternative evidence
+PASS  LIVE operational PCM is gated before deterministic claim validation
+PASS  LIVE rejected claim PCM is dropped rather than spoken
+PASS  LIVE operational tools use documented interactive execution mode
+PASS  LIVE worker VAD threshold no longer uses over-conservative 0.6
+
+VoiceStrike live-session regression: 26 passed, 0 failed.

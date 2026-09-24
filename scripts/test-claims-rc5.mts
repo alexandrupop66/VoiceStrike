@@ -44,5 +44,17 @@ check('spelled unauthorised location is rejected (former false negative)', claim
 check('compact unauthorised location still rejected', claim('B148 is available at D99.').code === 'UNAUTHORISED_LOCATION_CLAIM');
 check('no discrepancy evidence => logged claim rejected', assessAgentReplyClaims('I have logged the discrepancy at C12.', new CommandRegistry().acceptFinalTranscript("VoiceStrike, B148 isn't at C12. The location is empty.")).code === 'UNVERIFIED_MUTATION_CLAIM');
 
+
+
+// VS-001: E3 CONFIRM outcome claims are bidirectional. The model may not narrate failure before
+// the deterministic result exists, nor contradict a final VERIFIED_SUCCESS result.
+const e3Registry = new CommandRegistry();
+const e3 = e3Registry.acceptFinalTranscript('VoiceStrike, I scanned B184 by mistake.');
+const e3Command = e3Registry.get(e3.id);
+check('VS-001 pending CONFIRM blocks failure narration', assessAgentReplyClaims('I could not complete the reversal.', e3Command, { state: 'PENDING' }).code === 'UNVERIFIED_FAILURE_CLAIM');
+check('VS-001 VERIFIED_SUCCESS blocks contradictory failure narration', assessAgentReplyClaims('I could not complete the reversal.', e3Command, { state: 'FINAL', outcome: 'VERIFIED_SUCCESS', verified: true }).code === 'CONTRADICTS_VERIFIED_RESULT');
+check('VS-001 failed authoritative outcome permits truthful failure narration', assessAgentReplyClaims('I could not complete the reversal.', e3Command, { state: 'FINAL', outcome: 'VERIFY_FAILED', verified: false }).allowed);
+check('VS-001 failed authoritative outcome still blocks success narration', assessAgentReplyClaims('The reversal has been completed.', e3Command, { state: 'FINAL', outcome: 'VERIFY_FAILED', verified: false }).code === 'UNVERIFIED_MUTATION_CLAIM');
+
 console.log(`\nVoiceStrike RC5 claim gate: ${passed} passed, ${failed} failed.`);
 if (failed > 0) throw new Error(`RC5 claim regressions failed: ${failed}`);

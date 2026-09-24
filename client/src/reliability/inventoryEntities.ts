@@ -51,8 +51,17 @@ export function resolveInventoryDiscrepancyEntities(text: string): InventoryDisc
   const componentCandidates: string[] = [];
   const locationCandidates: string[] = [];
 
+  // "location for/of B148" names the component whose location is being discussed.
+  // It must not be interpreted as a location ID merely because component/location IDs
+  // share the same lexical shape.
+  const locationForComponentCue = /\blocation\s+(?:for|of)\s+([^,.!?;]{1,36})/gi;
+  for (const match of raw.matchAll(locationForComponentCue)) {
+    componentCandidates.push(...firstIds(match[1] ?? '', 'component_id'));
+  }
+
   // Explicit location roles: "at C12", "location C12", "location is C12", "bin C12".
-  const locationCue = /\b(?:at|location(?:\s+(?:is|was))?|bin|slot)\s+([^,.!?;]{1,36})/gi;
+  // Exclude "location for/of <component>" because that phrase describes the component role.
+  const locationCue = /\b(?:at|location(?!\s+(?:for|of)\b)(?:\s+(?:is|was))?|bin|slot)\s+([^,.!?;]{1,36})/gi;
   for (const match of raw.matchAll(locationCue)) {
     locationCandidates.push(...firstIds(match[1] ?? '', 'location_id'));
   }

@@ -1,0 +1,88 @@
+
+> voicestrike@0.10.0 build
+> npm run build -w server && npm run build -w client
+
+
+> @voicestrike/server@0.10.0 build
+> tsc
+
+src/db/database.ts(1,22): error TS2307: Cannot find module 'better-sqlite3' or its corresponding type declarations.
+src/db/database.ts(2,18): error TS2307: Cannot find module 'node:path' or its corresponding type declarations.
+src/db/database.ts(3,27): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+src/db/database.ts(4,31): error TS2307: Cannot find module 'node:url' or its corresponding type declarations.
+src/db/database.ts(10,16): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+src/db/database.ts(10,63): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+src/index.ts(1,35): error TS2307: Cannot find module 'dotenv' or its corresponding type declarations.
+src/index.ts(2,18): error TS2307: Cannot find module 'node:path' or its corresponding type declarations.
+src/index.ts(3,31): error TS2307: Cannot find module 'node:url' or its corresponding type declarations.
+src/index.ts(4,21): error TS2307: Cannot find module 'express' or its corresponding type declarations.
+src/index.ts(5,18): error TS2307: Cannot find module 'cors' or its corresponding type declarations.
+src/index.ts(13,21): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+src/index.ts(22,10): error TS7006: Parameter '_req' implicitly has an 'any' type.
+src/index.ts(22,16): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/index.ts(28,38): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+src/reliability/faults.ts(20,3): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+src/reliability/faults.ts(21,3): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+src/reliability/faults.ts(24,35): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+src/reliability/faults.ts(25,10): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+src/routes/api.ts(1,28): error TS2307: Cannot find module 'node:crypto' or its corresponding type declarations.
+src/routes/api.ts(2,39): error TS2307: Cannot find module 'express' or its corresponding type declarations.
+src/routes/api.ts(229,27): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/routes/api.ts(229,32): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/api.ts(257,27): error TS7006: Parameter '_req' implicitly has an 'any' type.
+src/routes/api.ts(257,33): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/api.ts(267,35): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+src/routes/api.ts(272,38): error TS7006: Parameter '_req' implicitly has an 'any' type.
+src/routes/api.ts(272,44): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/api.ts(273,18): error TS2580: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+src/routes/api.ts(318,42): error TS7006: Parameter '_req' implicitly has an 'any' type.
+src/routes/api.ts(318,48): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/api.ts(323,43): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/routes/api.ts(323,48): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/api.ts(362,40): error TS7006: Parameter '_req' implicitly has an 'any' type.
+src/routes/api.ts(362,46): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/api.ts(414,45): error TS7006: Parameter '_req' implicitly has an 'any' type.
+src/routes/api.ts(414,51): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/api.ts(419,38): error TS7006: Parameter '_req' implicitly has an 'any' type.
+src/routes/api.ts(419,44): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/api.ts(427,39): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/routes/api.ts(427,44): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/api.ts(446,41): error TS7006: Parameter '_req' implicitly has an 'any' type.
+src/routes/api.ts(446,47): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/api.ts(451,35): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/routes/api.ts(451,40): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/api.ts(469,42): error TS7006: Parameter '_req' implicitly has an 'any' type.
+src/routes/api.ts(469,48): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/api.ts(487,43): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/routes/api.ts(487,48): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/api.ts(520,44): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/routes/api.ts(520,49): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/api.ts(650,45): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/routes/api.ts(650,50): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/api.ts(718,43): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/routes/api.ts(718,48): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/api.ts(741,56): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/routes/api.ts(741,61): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/api.ts(853,54): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/routes/api.ts(853,59): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/api.ts(879,46): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/routes/api.ts(879,51): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/api.ts(909,49): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/routes/api.ts(909,54): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/api.ts(965,45): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/routes/api.ts(965,50): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/api.ts(1119,32): error TS7006: Parameter '_req' implicitly has an 'any' type.
+src/routes/api.ts(1119,38): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/api.ts(1135,26): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/routes/api.ts(1135,31): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/api.ts(1146,33): error TS7006: Parameter '_req' implicitly has an 'any' type.
+src/routes/api.ts(1146,39): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/api.ts(1152,30): error TS7006: Parameter '_req' implicitly has an 'any' type.
+src/routes/api.ts(1152,36): error TS7006: Parameter 'res' implicitly has an 'any' type.
+npm error Lifecycle script `build` failed with error:
+npm error code 2
+npm error path /mnt/data/voicestrike-forensic/voicestrike-build7/server
+npm error workspace @voicestrike/server@0.10.0
+npm error location /mnt/data/voicestrike-forensic/voicestrike-build7/server
+npm error command failed
+npm error command sh -c tsc

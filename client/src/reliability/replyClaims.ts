@@ -1,11 +1,17 @@
-import type { PendingCommand } from './types.js';
+import type { PendingCommand, ReliabilityOutcome } from './types.js';
 import { normalizeTechnicalId } from './entities.js';
 import { maskTechnicalIds, normalizeSpokenTechnicalIds } from './spokenIds.js';
 
 export type ReplyClaimDecision = {
   allowed: boolean;
-  code?: 'UNVERIFIED_MUTATION_CLAIM' | 'UNAUTHORISED_LOCATION_CLAIM' | 'UNAUTHORISED_QUANTITY_CLAIM';
+  code?: 'UNVERIFIED_MUTATION_CLAIM' | 'UNVERIFIED_FAILURE_CLAIM' | 'CONTRADICTS_VERIFIED_RESULT' | 'UNAUTHORISED_LOCATION_CLAIM' | 'UNAUTHORISED_QUANTITY_CLAIM';
   detail?: string;
+};
+
+export type ReversalSpeechAuthority = {
+  state: 'PENDING' | 'FINAL';
+  outcome?: ReliabilityOutcome;
+  verified?: boolean;
 };
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -72,20 +78,62 @@ function allowedQuantities(command: PendingCommand): Set<number> {
   return allowed;
 }
 
+function claimsReversalSuccess(text: string): boolean {
+  return /\b(?:reversed|reversal (?:was|has been) (?:completed|verified)|recovery was verified)\b/i.test(text);
+}
+
+function claimsReversalFailure(text: string): boolean {
+  return /\b(?:(?:could not|couldn't|cannot|can't|did not|didn't|failed to|was unable to)\s+(?:complete\s+)?(?:the\s+)?(?:reversal|reverse(?:\s+(?:the\s+)?scan)?)|(?:reversal|reverse(?:\s+scan)?)\s+(?:failed|was not completed|wasn't completed|did not complete))\b/i.test(text);
+}
+
+function claimsGenericOperationalFailure(text: string): boolean {
+  return /\b(?:could not|couldn't|cannot|can't|failed to|unable to|was unable to)\s+(?:complete|verify|process|finish)(?:\s+(?:that|the|this))?\s*(?:request|operation|result|workflow)?\b/i.test(text);
+}
+
 /**
  * Final, deterministic speech claim gate.
  *
  * The model may phrase authorised facts, but it may not create operational facts. This gate is
  * evaluated before buffered PCM for E1/E2/E3 is released to the speakers.
  */
-export function assessAgentReplyClaims(rawText: string, command: PendingCommand | null): ReplyClaimDecision {
+export function assessAgentReplyClaims(
+  rawText: string,
+  command: PendingCommand | null,
+  reversalAuthority: ReversalSpeechAuthority | null = null,
+  e2Authority: ReversalSpeechAuthority | null = null,
+): ReplyClaimDecision {
   if (!command) return { allowed: true };
   // RC5: normalise spoken identifiers first; quantities are parsed only with identifiers masked.
   const text = normalizeSpokenTechnicalIds(rawText);
   const quantityText = maskTechnicalIds(rawText);
   const lower = quantityText.toLowerCase();
 
-  if (/\b(?:reversed|reversal (?:was|has been) (?:completed|verified)|recovery was verified)\b/i.test(text) && !command.evidence.reversal) {
+  const reversalSuccess = claimsReversalSuccess(text);
+  const reversalFailure = claimsReversalFailure(text);
+  const operationalFailure = claimsGenericOperationalFailure(text);
+
+  if (command.workflow === 'E2_MISSING_INVENTORY' && e2Authority) {
+    if (operationalFailure && e2Authority.state === 'PENDING') {
+      return { allowed: false, code: 'UNVERIFIED_FAILURE_CLAIM', detail: 'E2 failure was spoken while the authoritative code-owned inventory workflow was still pending.' };
+    }
+    if (operationalFailure && e2Authority.state === 'FINAL' && e2Authority.outcome === 'VERIFIED_SUCCESS' && e2Authority.verified === true) {
+      return { allowed: false, code: 'CONTRADICTS_VERIFIED_RESULT', detail: 'E2 failure contradicts the completed verified inventory workflow.' };
+    }
+  }
+
+  if (command.workflow === 'E3_MISTAKEN_SCAN' && reversalAuthority) {
+    if (reversalSuccess && (reversalAuthority.state !== 'FINAL' || reversalAuthority.outcome !== 'VERIFIED_SUCCESS' || reversalAuthority.verified !== true)) {
+      return { allowed: false, code: 'UNVERIFIED_MUTATION_CLAIM', detail: `Reversal success contradicts authoritative speech state ${reversalAuthority.state}/${reversalAuthority.outcome ?? 'PENDING'}.` };
+    }
+    if (reversalFailure && reversalAuthority.state === 'PENDING') {
+      return { allowed: false, code: 'UNVERIFIED_FAILURE_CLAIM', detail: 'Reversal failure was spoken while the authoritative CONFIRM result was still pending.' };
+    }
+    if (reversalFailure && reversalAuthority.state === 'FINAL' && reversalAuthority.outcome === 'VERIFIED_SUCCESS' && reversalAuthority.verified === true) {
+      return { allowed: false, code: 'CONTRADICTS_VERIFIED_RESULT', detail: 'Reversal failure contradicts VERIFIED_SUCCESS from independent authoritative verification.' };
+    }
+  }
+
+  if (reversalSuccess && !command.evidence.reversal) {
     return { allowed: false, code: 'UNVERIFIED_MUTATION_CLAIM', detail: 'Reversal success was spoken without verified reversal evidence on this command.' };
   }
 

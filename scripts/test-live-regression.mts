@@ -87,7 +87,11 @@ const safe = assessAgentReplyClaims('A discrepancy has been logged. You can find
 check('LIVE D05/4 claim is allowed only after exact alternative evidence', safe.allowed);
 // RC5: operational PCM is still held before claim validation, but per validated sentence
 // (transcript.agent.delta) instead of until the whole reply ends; no timing => full buffer.
-check('LIVE operational PCM is gated before deterministic claim validation', voice.includes("? 'BUFFER'") && voice.includes('assessAgentReplyClaims(text, command)') && voice.includes('assessAgentReplyClaims(this.gatedDeltaText, command)') && voice.includes('this.releaseGatedAudio();'));
+check('LIVE operational PCM is gated before deterministic claim validation',
+  voice.includes("? 'BUFFER'") &&
+  voice.includes('assessAgentReplyClaims(text, command, reversalAuthority, e2Authority)') &&
+  voice.includes('assessAgentReplyClaims(this.gatedDeltaText, command, reversalAuthority, e2Authority)') &&
+  voice.includes('this.releaseGatedAudio();'));
 check('LIVE rejected claim PCM is dropped rather than spoken', voice.includes("this.replyClaimMode = 'BLOCK'") && voice.includes('this.gatedAudio = [];') && voice.includes('Unsafe operational claim suppressed'));
 
 // RC4: AssemblyAI documents `interactive` as the default for sub-5 s lookups; under `hold` user
