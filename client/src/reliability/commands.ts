@@ -301,7 +301,15 @@ export class CommandRegistry {
         if(!component) return false;
         command.slots.component=component;
       } else if(pending.field==='reportedLocation'){
-        const location=canonical(resolveCorrectedTechnicalEntity('location_id',text));
+        let location=canonical(resolveCorrectedTechnicalEntity('location_id',text));
+        if(!location){
+          // A worker may answer with the complete pair ("B148, C12"). Interpret only this
+          // clarification utterance: if one ID is the command-owned component, the single
+          // remaining ID is the requested location.
+          const ids=extractTechnicalIds(text,'location_id');
+          const remaining=command.slots.component ? ids.filter((id)=>id!==command.slots.component) : ids;
+          if(remaining.length===1) location=remaining[0];
+        }
         if(!location) return false;
         command.slots.reportedLocation=location;
       } else if(pending.field==='observedEmpty'){
