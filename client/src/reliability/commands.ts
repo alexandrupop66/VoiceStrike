@@ -292,8 +292,23 @@ export class CommandRegistry {
       const comp=canonical(resolvedComponent(text)); if(!comp) return false; command.fragments.push(text); command.updatedAt=now; command.slots.observedComponent=comp; command.pendingClarification=undefined; command.status='READY'; command.phase='VERIFY'; refreshEntities(command); return true;
     }
     if(command.workflow==='E2_MISSING_INVENTORY'){
-      const combined=`${commandContext(command)} ${text}`.trim(); const typed=resolveInventoryDiscrepancyEntities(combined); const component=canonical(typed.component); const location=canonical(typed.location);
-      if(component)command.slots.component=component; if(location)command.slots.reportedLocation=location; if(typed.observedEmpty)command.slots.observedEmpty=true;
+      // VS-012: the pending field owns the interpretation of a short clarification.
+      // Component/location IDs intentionally share lexical shape, so reparsing the whole
+      // accumulated command makes a standalone "C12" ambiguous with the earlier B148.
+      // Only the new utterance is interpreted, using pending.allowedType as deterministic type.
+      if(pending.field==='component'){
+        const component=canonical(resolveCorrectedTechnicalEntity('component_id',text));
+        if(!component) return false;
+        command.slots.component=component;
+      } else if(pending.field==='reportedLocation'){
+        const location=canonical(resolveCorrectedTechnicalEntity('location_id',text));
+        if(!location) return false;
+        command.slots.reportedLocation=location;
+      } else if(pending.field==='observedEmpty'){
+        if(!/\b(?:empty|yes|correct|right)\b/i.test(normalizedPhrase(text))) return false;
+        command.slots.observedEmpty=true;
+      } else return false;
+
       command.fragments.push(text); command.updatedAt=now;
       if(!command.slots.component) command.pendingClarification={workflow:command.workflow,field:'component',allowedType:'component_id'};
       else if(!command.slots.reportedLocation) command.pendingClarification={workflow:command.workflow,field:'reportedLocation',allowedType:'location_id'};
