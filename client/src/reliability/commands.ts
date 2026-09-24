@@ -296,7 +296,13 @@ export class CommandRegistry {
       // Component/location IDs intentionally share lexical shape, so reparsing the whole
       // accumulated command makes a standalone "C12" ambiguous with the earlier B148.
       // Only the new utterance is interpreted, using pending.allowedType as deterministic type.
-      if(pending.field==='component'){
+      const clarificationIds=extractTechnicalIds(text,'component_id');
+      if(command.slots.observedEmpty===true && clarificationIds.length===2 && pending.field==='component'){
+        // Narrow complete-pair clarification: the worker supplied both missing IDs in this turn.
+        // Ordered pair semantics are allowed only because EMPTY was already explicit on this E2.
+        command.slots.component=clarificationIds[0];
+        command.slots.reportedLocation=clarificationIds[1];
+      } else if(pending.field==='component'){
         const component=canonical(resolveCorrectedTechnicalEntity('component_id',text));
         if(!component) return false;
         command.slots.component=component;
