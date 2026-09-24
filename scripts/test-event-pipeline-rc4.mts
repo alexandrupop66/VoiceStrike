@@ -646,6 +646,122 @@ async function e2Ready(s: Session): Promise<void> {
   check('P23 VS-011 exact live ordering preserves pending location clarification', /which location for B148 is empty\??/i.test(lastAgent), lastAgent);
 }
 
+// P24 / VS-012 — a pending location clarification owns a short location answer by type, not by reparsing prior prose.
+{
+  const s = await freshSession();
+  s.say('VoiceStrike location for B148 is empty', 'u-e2-vs012-short-1');
+  s.reply({ text: 'Which location for B148 is empty?' });
+  await s.settle();
+
+  s.say('C12.', 'u-e2-vs012-short-2');
+  await s.settle();
+
+  const registry = (s.agent as unknown as { commandRegistry: { current(): { status?: string; slots?: Record<string, unknown>; pendingClarification?: { field?: string } } | null } }).commandRegistry;
+  const command = registry.current();
+  check('P24 VS-012 short C12 binds directly to pending reportedLocation', command?.slots?.reportedLocation === 'C12', command);
+  check('P24 VS-012 short C12 makes the E2 command READY without component reconfirmation',
+    command?.status === 'READY' && command?.pendingClarification === undefined, command);
+}
+
+// P25 / VS-012 — early authoritative read + later C12 must continue deterministically with NO provider tool selection.
+{
+  const s = await freshSession();
+  s.say('VoiceStrike location for B148 is empty.', 'u-e2-vs012-ready-1');
+
+  const jobCall = s.callId();
+  s.reply({ tools: [{ callId: jobCall, name: 'get_current_job' }] });
+  await s.settle(120);
+
+  const inventoryCall = s.callId();
+  s.reply({ tools: [{ callId: inventoryCall, name: 'check_inventory', args: { component_id: 'B148' } }] });
+  await s.settle(150);
+
+  // Provider asks the correct pending question; the next worker turn supplies only the missing slot.
+  s.reply({ text: 'Which location for B148 is empty?' });
+  await s.settle();
+
+  const beforeInventory = endpointCalls.filter((entry) => entry.includes('/api/tools/check-inventory')).length;
+  const beforeDiscrepancy = endpointCalls.filter((entry) => entry.includes('/api/tools/report-inventory-discrepancy')).length;
+  const beforeAlternative = endpointCalls.filter((entry) => entry.includes('/api/tools/find-alternative-inventory')).length;
+
+  s.say('C12.', 'u-e2-vs012-ready-2');
+  await s.settle(300); // deliberately no provider tool.call after the clarification
+
+  const afterInventory = endpointCalls.filter((entry) => entry.includes('/api/tools/check-inventory')).length;
+  const afterDiscrepancy = endpointCalls.filter((entry) => entry.includes('/api/tools/report-inventory-discrepancy')).length;
+  const afterAlternative = endpointCalls.filter((entry) => entry.includes('/api/tools/find-alternative-inventory')).length;
+
+  check('P25 VS-012 READY transition owns deterministic E2 continuation after an early read',
+    afterDiscrepancy === beforeDiscrepancy + 1 && afterAlternative === beforeAlternative + 1,
+    { beforeInventory, afterInventory, beforeDiscrepancy, afterDiscrepancy, beforeAlternative, afterAlternative, endpointCalls });
+}
+
+// P26 / VS-012 — if the provider tries to close a pending clarification with stock facts,
+// VoiceStrike must request a code-owned spoken clarification, not only inject UI transcript text.
+{
+  const s = await freshSession();
+  s.say('VoiceStrike location for B148 is empty.', 'u-e2-vs012-audio-1');
+
+  const jobCall = s.callId();
+  s.reply({ tools: [{ callId: jobCall, name: 'get_current_job' }] });
+  await s.settle(120);
+
+  const inventoryCall = s.callId();
+  s.reply({ tools: [{ callId: inventoryCall, name: 'check_inventory', args: { component_id: 'B148' } }] });
+  await s.settle(150);
+
+  const replyCreateBefore = s.sentOfType('reply.create').length;
+  const audibleBefore = s.audible();
+  s.reply({ text: 'The system shows seven units of B148 at location C12.' });
+  await s.settle(120);
+
+  const replyCreateAfter = s.sentOfType('reply.create').length;
+  const lastAgentAfterBlock = [...s.transcripts].reverse().find((entry) => entry.role === 'agent')?.text ?? '';
+  check('P26 VS-012 stock-only close is replaced by the exact pending clarification',
+    /which location for B148 is empty\??/i.test(lastAgentAfterBlock), lastAgentAfterBlock);
+  check('P26 VS-012 deterministic clarification requests an actual spoken code reply',
+    replyCreateAfter === replyCreateBefore + 1,
+    { replyCreateBefore, replyCreateAfter, sent: s.sentOfType('reply.create') });
+
+  // Simulate the provider rendering the code-requested exact prompt. It must be audible.
+  s.reply({ text: 'Which location for B148 is empty?' });
+  await s.settle();
+  check('P26 VS-012 code-owned clarification is audibly deliverable',
+    s.audible() > audibleBefore,
+    { audibleBefore, audibleAfter: s.audible() });
+}
+
+// P27 / VS-012 — stale early inventory evidence must trigger a fresh read on READY, not strand the command.
+{
+  const s = await freshSession();
+  s.say('VoiceStrike location for B148 is empty.', 'u-e2-vs012-stale-1');
+
+  const inventoryCall = s.callId();
+  s.reply({ tools: [{ callId: inventoryCall, name: 'check_inventory', args: { component_id: 'B148' } }] });
+  await s.settle(150);
+  s.reply({ text: 'Which location for B148 is empty?' });
+  await s.settle();
+
+  const internals = s.agent as unknown as {
+    commandRegistry: { current(): { id: string } | null };
+    workflow: { noteInventoryCheck(commandId: string, result: Record<string, unknown>, now?: number): void };
+  };
+  const commandId = internals.commandRegistry.current()?.id ?? '';
+  internals.workflow.noteInventoryCheck(commandId, { component: 'B148', location: 'C12', quantity: 7 }, Date.now() - 121_000);
+
+  const beforeInventory = endpointCalls.filter((entry) => entry.includes('/api/tools/check-inventory')).length;
+  const beforeDiscrepancy = endpointCalls.filter((entry) => entry.includes('/api/tools/report-inventory-discrepancy')).length;
+
+  s.say('C12.', 'u-e2-vs012-stale-2');
+  await s.settle(300); // no provider tool.call
+
+  const afterInventory = endpointCalls.filter((entry) => entry.includes('/api/tools/check-inventory')).length;
+  const afterDiscrepancy = endpointCalls.filter((entry) => entry.includes('/api/tools/report-inventory-discrepancy')).length;
+  check('P27 VS-012 stale early evidence is refreshed and then continued deterministically',
+    afterInventory === beforeInventory + 1 && afterDiscrepancy === beforeDiscrepancy + 1,
+    { beforeInventory, afterInventory, beforeDiscrepancy, afterDiscrepancy, endpointCalls });
+}
+
 check('HARNESS no exception inside the provider event pipeline', handlerErrors.length === 0, handlerErrors.slice(0, 3));
 globalThis.fetch = realFetch;
 console.error = realConsoleError;
