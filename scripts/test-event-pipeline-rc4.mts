@@ -626,6 +626,26 @@ async function e2Ready(s: Session): Promise<void> {
   check('P22 VS-011 successful read cannot replace pending location clarification', /which location for B148 is empty\??/i.test(lastAgent), lastAgent);
 }
 
+// P23 / VS-011 — exact live ordering: context read -> inventory read -> truthful stock reply.
+{
+  const s = await freshSession();
+  s.say('VoiceStrike location for B148 is empty.', 'u-e2-vs011-live');
+
+  const jobCall = s.callId();
+  s.reply({ tools: [{ callId: jobCall, name: 'get_current_job' }] });
+  await s.settle(150);
+
+  const inventoryCall = s.callId();
+  s.reply({ tools: [{ callId: inventoryCall, name: 'check_inventory', args: { component_id: 'B148' } }] });
+  await s.settle(150);
+
+  s.reply({ text: 'The system shows seven units of B148 at location C12.' });
+  await s.settle();
+
+  const lastAgent = [...s.transcripts].reverse().find((entry) => entry.role === 'agent')?.text ?? '';
+  check('P23 VS-011 exact live ordering preserves pending location clarification', /which location for B148 is empty\??/i.test(lastAgent), lastAgent);
+}
+
 check('HARNESS no exception inside the provider event pipeline', handlerErrors.length === 0, handlerErrors.slice(0, 3));
 globalThis.fetch = realFetch;
 console.error = realConsoleError;
