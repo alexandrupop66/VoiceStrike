@@ -1030,10 +1030,19 @@ export class VoiceAgentClient {
         const commandId = this.commandRegistry.beginReply(binding.authorised ? binding.commandId : null);
         this.replyClaimCommandId = binding.authorised ? binding.commandId : null;
         const replyWorkflow = this.replyClaimCommandId ? this.commandRegistry.workflowFor(this.replyClaimCommandId) : null;
+        const replyCommand = this.replyClaimCommandId ? this.commandRegistry.get(this.replyClaimCommandId) : null;
+        const e2NeedsLocation = replyCommand?.workflow === 'E2_MISSING_INVENTORY'
+          && replyCommand.pendingClarification?.field === 'reportedLocation'
+          && Boolean(replyCommand.slots.component);
         this.replyClaimMode = binding.authorised && (replyWorkflow === 'E1_WRONG_COMPONENT' || replyWorkflow === 'E2_MISSING_INVENTORY' || replyWorkflow === 'E3_MISTAKEN_SCAN')
           ? 'BUFFER'
           : binding.authorised ? 'ALLOW' : 'BLOCK';
-        this.resetClaimGate(this.replyClaimMode === 'BUFFER' ? 'STREAM_GATE' : this.replyClaimMode === 'ALLOW' ? 'ALLOW' : 'BLOCK', receivedAt);
+        this.resetClaimGate(
+          this.replyClaimMode === 'BUFFER'
+            ? (e2NeedsLocation ? 'FULL_BUFFER' : 'STREAM_GATE')
+            : this.replyClaimMode === 'ALLOW' ? 'ALLOW' : 'BLOCK',
+          receivedAt,
+        );
         // Latency stage: response start, kept separate from the causality binding below.
         emitReliabilityTelemetry({
           event: 'reliability.response_started',
@@ -1092,6 +1101,7 @@ export class VoiceAgentClient {
           this.gatedMode = 'FULL_BUFFER';
         }
         this.gatedDeltaText = /^[.,!?;:'")\]]/.test(delta) || !this.gatedDeltaText ? `${this.gatedDeltaText}${delta}` : `${this.gatedDeltaText} ${delta}`;
+        if (this.gatedMode === 'FULL_BUFFER') break;
         if (!this.gatedDeltaTimingOk || endMs == null || !/[.!?]["')\]]?$/.test(delta.trim())) break;
         const command = this.replyClaimCommandId ? this.commandRegistry.get(this.replyClaimCommandId) : null;
         const reversalAuthority = this.replyClaimCommandId ? this.reversalSpeechAuthority.get(this.replyClaimCommandId) ?? null : null;
@@ -1121,6 +1131,25 @@ export class VoiceAgentClient {
           const command = this.replyClaimCommandId ? this.commandRegistry.get(this.replyClaimCommandId) : null;
           const reversalAuthority = this.replyClaimCommandId ? this.reversalSpeechAuthority.get(this.replyClaimCommandId) ?? null : null;
           const e2Authority = this.replyClaimCommandId ? this.e2SpeechAuthority.get(this.replyClaimCommandId) ?? null : null;
+          const pendingE2Component = command?.workflow === 'E2_MISSING_INVENTORY'
+            && command.pendingClarification?.field === 'reportedLocation'
+            ? String(command.slots.component ?? '').trim().toUpperCase()
+            : '';
+          if (pendingE2Component) {
+            const normalizedReply = normalizeSpokenTechnicalIds(text);
+            const asksMissingLocation = new RegExp(
+              `\\b(?:which|what)\\s+location\\b[\\s\\S]{0,80}\\b${pendingE2Component}\\b[\\s\\S]{0,80}\\bempty\\b`,
+              'i',
+            ).test(normalizedReply);
+            if (!asksMissingLocation) {
+              this.blockGatedReply(
+                { code: 'REQUIRED_CLARIFICATION', detail: `E2 still requires reportedLocation for ${pendingE2Component}; a truthful inventory read cannot close the worker clarification.` },
+                text,
+                'FINAL',
+              );
+              break;
+            }
+          }
           const claimDecision = assessAgentReplyClaims(text, command, reversalAuthority, e2Authority);
           if (!claimDecision.allowed) {
             this.blockGatedReply(claimDecision, text, 'FINAL');
@@ -2282,7 +2311,7 @@ export class VoiceAgentClient {
   // RC5 — sentence-level streaming claim gate
   // ------------------------------------------------------------------------------------------
 
-  private resetClaimGate(mode: 'STREAM_GATE' | 'ALLOW' | 'BLOCK', startedAt: number): void {
+  private resetClaimGate(mode: 'STREAM_GATE' | 'FULL_BUFFER' | 'ALLOW' | 'BLOCK', startedAt: number): void {
     this.gatedAudio = [];
     this.gatedBufferedSamples = 0;
     this.gatedReleasedSamples = 0;
