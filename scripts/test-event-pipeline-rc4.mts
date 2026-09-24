@@ -609,6 +609,23 @@ async function e2Ready(s: Session): Promise<void> {
   check('P21 VS-010 deterministic E2 continuation records discrepancy without provider orchestration', afterDiscrepancy === beforeDiscrepancy + 1, { beforeDiscrepancy, afterDiscrepancy, endpointCalls });
 }
 
+// P22 / VS-011 — successful inventory read must not close an incomplete E2 command.
+{
+  const s = await freshSession();
+  s.say('VoiceStrike location for B148 is empty.', 'u-e2-vs011');
+  const call = s.callId();
+  s.reply({
+    text: 'The system shows seven units of B148 at location C12.',
+    tools: [{ callId: call, name: 'check_inventory', args: { component_id: 'B148' } }],
+  });
+  await s.settle(180);
+
+  const result = s.resultsFor(call)[0] ?? {};
+  const lastAgent = [...s.transcripts].reverse().find((entry) => entry.role === 'agent')?.text ?? '';
+  check('P22 VS-011 incomplete E2 inventory read still completes successfully', Boolean(result.ok), result);
+  check('P22 VS-011 successful read cannot replace pending location clarification', /which location for B148 is empty\??/i.test(lastAgent), lastAgent);
+}
+
 check('HARNESS no exception inside the provider event pipeline', handlerErrors.length === 0, handlerErrors.slice(0, 3));
 globalThis.fetch = realFetch;
 console.error = realConsoleError;
