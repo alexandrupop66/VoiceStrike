@@ -1131,6 +1131,11 @@ export class VoiceAgentClient {
           const command = this.replyClaimCommandId ? this.commandRegistry.get(this.replyClaimCommandId) : null;
           const reversalAuthority = this.replyClaimCommandId ? this.reversalSpeechAuthority.get(this.replyClaimCommandId) ?? null : null;
           const e2Authority = this.replyClaimCommandId ? this.e2SpeechAuthority.get(this.replyClaimCommandId) ?? null : null;
+          const claimDecision = assessAgentReplyClaims(text, command, reversalAuthority, e2Authority);
+          if (!claimDecision.allowed) {
+            this.blockGatedReply(claimDecision, text, 'FINAL');
+            break;
+          }
           const pendingE2Component = command?.workflow === 'E2_MISSING_INVENTORY'
             && command.pendingClarification?.field === 'reportedLocation'
             ? String(command.slots.component ?? '').trim().toUpperCase()
@@ -1149,11 +1154,6 @@ export class VoiceAgentClient {
               );
               break;
             }
-          }
-          const claimDecision = assessAgentReplyClaims(text, command, reversalAuthority, e2Authority);
-          if (!claimDecision.allowed) {
-            this.blockGatedReply(claimDecision, text, 'FINAL');
-            break;
           }
           this.replyClaimMode = 'ALLOW';
           this.gatedReleaseLimitSamples = Number.POSITIVE_INFINITY;
