@@ -867,6 +867,26 @@ async function e2Ready(s: Session): Promise<void> {
     s.sentOfType('reply.create'));
 }
 
+
+// P32 / VS-014 live failure — CODE_CONTINUATION must be self-contained.
+// Never depend on a preceding conversation.message being committed to provider history before
+// reply.create snapshots context. The exact verified worker-facing outcome must be carried in
+// reply.create.instructions itself.
+{
+  const s = await freshSession();
+  s.say("VoiceStrike, B148 isn't at C12. The location is empty.", 'u-vs014-direct-delivery');
+  s.reply({ text: 'I will handle that inventory report.' }); // suppressed autonomous reply
+  await s.settle(350);
+
+  const creates = s.sentOfType('reply.create');
+  const lastCreate = creates[creates.length - 1] ?? {};
+  const instructions = String(lastCreate.instructions ?? '');
+  check('P32 VS-014 verified E2 delivery is self-contained in reply.create instructions',
+    /B148/i.test(instructions) && /D05/i.test(instructions) && /4/.test(instructions) &&
+    !/latest VoiceStrike system note/i.test(instructions),
+    lastCreate);
+}
+
 check('HARNESS no exception inside the provider event pipeline', handlerErrors.length === 0, handlerErrors.slice(0, 3));
 globalThis.fetch = realFetch;
 console.error = realConsoleError;
