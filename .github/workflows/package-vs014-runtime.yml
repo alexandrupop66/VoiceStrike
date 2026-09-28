@@ -1,0 +1,44 @@
+name: Package VoiceStrike VS-014 Runtime
+
+on:
+  push:
+    branches:
+      - package/VS-014-runtime-download-20260928
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout packaging branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Archive exact green VS-014 commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          COMMIT="877e6e3a76468a492d34d47608416faeb5a8879e"
+          ROOT="VoiceStrike_VS014_Runtime"
+          ZIP="VoiceStrike_VS014_Runtime_877e6e3.zip"
+          rm -rf package "$ZIP" "$ZIP.sha256"
+          mkdir -p "package/$ROOT"
+          git archive --format=tar "$COMMIT" | tar -x -C "package/$ROOT"
+          rm -f "package/$ROOT/.env"
+          rm -rf "package/$ROOT/node_modules" "package/$ROOT/.test-dist"
+          (cd package && zip -qr "../$ZIP" "$ROOT")
+          sha256sum "$ZIP" > "$ZIP.sha256"
+
+      - name: Upload source package
+        uses: actions/upload-artifact@v4
+        with:
+          name: VoiceStrike_VS014_Runtime_877e6e3
+          path: |
+            VoiceStrike_VS014_Runtime_877e6e3.zip
+            VoiceStrike_VS014_Runtime_877e6e3.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
