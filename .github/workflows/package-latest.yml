@@ -1,0 +1,26 @@
+name: Package VoiceStrike latest
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Create ZIP
+        run: |
+          zip -r VoiceStrike-latest.zip . -x ".git/*" "VoiceStrike-latest.zip"
+      - name: Upload ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: VoiceStrike-latest
+          path: VoiceStrike-latest.zip
+          if-no-files-found: error
+          retention-days: 7
