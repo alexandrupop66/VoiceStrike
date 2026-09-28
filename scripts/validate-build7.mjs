@@ -186,11 +186,16 @@ const spokenIds = read('client/src/reliability/spokenIds.ts');
 check('RC5 claim gate normalises spoken IDs and parses quantities with IDs masked', replyClaims.includes('normalizeSpokenTechnicalIds(rawText)') && replyClaims.includes('claimedAvailabilityQuantities(quantityText)') && spokenIds.includes('export function maskTechnicalIds'));
 check('RC5 PCM is released per validated sentence, with full-buffer fallback when word timing is missing', voice.includes("case 'transcript.agent.delta': {") && voice.includes('Math.round(endMs * SAMPLES_PER_MS)') && voice.includes("this.gatedMode = 'FULL_BUFFER';"));
 check('RC5 trusted PREPARE/CONFIRM are executed by code from authoritative state', voice.includes('this.startCodeOwnedProtectedAction(id, command.id,') && voice.includes("if (ctx && ctx.commandId === commandId) { actionId = ctx.actionId; componentId = ctx.componentId; }") && voice.includes("if (pending && pending.preparedCommandId === commandId) { actionId = pending.actionId; componentId = pending.componentId; }"));
-check('RC5 code-owned execution runs through the same gated tool path', voice.includes("{ call_id: entry.syntheticCallId, name: 'reverse_last_scan', arguments: { action_id: actionId, component_id: componentId } },") && voice.includes('internal ? internal.commandId : this.replyAuthority.commandIdForToolRequest(name)'));
+check('RC5 code-owned execution runs through the same gated tool path',
+  voice.includes("{ call_id: entry.syntheticCallId, name: 'reverse_last_scan', arguments: { action_id: actionId, component_id: componentId } },") &&
+  voice.includes("const causalCommandId = internal") &&
+  voice.includes("? internal.commandId") &&
+  voice.includes("this.replyAuthority.commandIdForToolRequest(name)"));
 check('RC5 provider reverse_last_scan joins code execution (no second mutation)',
   voice.includes("const candidateOwned = !internal && commandId ? this.codeOwnedFor(commandId) : null;") &&
-  voice.includes("candidateOwned.stage !== 'E2' && name === 'reverse_last_scan'") &&
-  voice.includes("? candidateOwned : null;"));
+  voice.includes("const joined = candidateOwned && this.codeOwnedExpectedTool(candidateOwned) === name ? candidateOwned : null;") &&
+  voice.includes("if (entry.stage === 'E3_INSPECT') return 'inspect_last_action';") &&
+  voice.includes("return 'reverse_last_scan';"));
 check('RC5 code outcome delivered by conversation.message + reply.create only when nothing is owed', voice.includes("type: 'reply.create'") && voice.includes("type: 'conversation.message', role: 'system'") && voice.includes('this.replyAuthority.canRequestCodeReply(entry.commandId, entry.syntheticCallId)'));
 check('RC5 provider correlation can only downgrade reply authority', voice.includes("this.replyAuthority.demoteCurrentReply('PROVIDER_ITEM_REJECTED')") && replyAuthority.includes('demoteCurrentReply('));
 check('RC5 interrupted fc-<call_id> replies discard their call result', voice.includes("providerReplyId.startsWith('fc-')") && voice.includes('this.interruptedCallIds.has(tool.callId)'));
