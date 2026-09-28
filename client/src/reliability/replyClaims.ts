@@ -90,6 +90,12 @@ function claimsGenericOperationalFailure(text: string): boolean {
   return /\b(?:could not|couldn't|cannot|can't|failed to|unable to|was unable to)\s+(?:complete|verify|process|finish)(?:\s+(?:that|the|this))?\s*(?:request|operation|result|workflow)?\b/i.test(text);
 }
 
+function claimsOperationalAuthorityRefusal(text: string): boolean {
+  return /\boperational\s+tools?\s+require\b[\s\S]{0,120}\bwake[- ]authorised\b/i.test(text)
+    || /\bsay\s+voice\s*strike\b[\s\S]{0,80}\brepeat\b/i.test(text)
+    || /\bwake[- ]authorised\s+worker\s+turn\b/i.test(text);
+}
+
 /**
  * Final, deterministic speech claim gate.
  *
@@ -110,7 +116,7 @@ export function assessAgentReplyClaims(
 
   const reversalSuccess = claimsReversalSuccess(text);
   const reversalFailure = claimsReversalFailure(text);
-  const operationalFailure = claimsGenericOperationalFailure(text);
+  const operationalFailure = claimsGenericOperationalFailure(text) || claimsOperationalAuthorityRefusal(text);
 
   if (command.workflow === 'E2_MISSING_INVENTORY' && e2Authority) {
     if (operationalFailure && e2Authority.state === 'PENDING') {
