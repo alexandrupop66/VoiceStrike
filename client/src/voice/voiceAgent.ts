@@ -1030,6 +1030,21 @@ export class VoiceAgentClient {
         const replyId = `reply-${this.replySeq}`;
         let binding = this.replyAuthority.beginReply(replyId, this.epochs.current());
         this.currentProviderReplyId = replyId;
+        // VS-014 Single Owner: the provider's autonomous first reply on a code-owned operational
+        // turn is never audible and owns no operational result. Code will request one CODE_CONTINUATION
+        // after authoritative execution/verification completes.
+        if (binding.authorised && binding.reason === 'BOUND_TO_ACCEPTED_TURN' && binding.commandId && this.codeOwnedFor(binding.commandId)) {
+          binding = this.replyAuthority.demoteCurrentReply('CODE_OWNED_INITIAL_REPLY') ?? binding;
+          emitReliabilityTelemetry({
+            event: 'reliability.orphan_reply_suppressed',
+            sessionId: this.sessionId,
+            epoch: this.epochs.current(),
+            turnId: binding.turnId,
+            commandId: binding.commandId,
+            resultClass: 'CODE_OWNED_INITIAL_REPLY',
+            detail: `${replyId}; autonomous provider reply suppressed; VoiceStrike code owns this operational turn`,
+          });
+        }
         // RC5: provider correlation may only DOWNGRADE. A reply whose item_id is a locally rejected
         // transcript is never audible and owns no tools, whatever the ledger inferred.
         const providerItemId = String(message.item_id ?? '');
@@ -1279,9 +1294,10 @@ export class VoiceAgentClient {
             detail: `reply=${doneReplyId ?? 'none'}; finished=${finishedBinding ? `${finishedBinding.reason}:${finishedBinding.commandId ?? '-'}:authorised=${finishedBinding.authorised}` : 'none'}; status=${String(message.status ?? 'done')}`,
           });
         }
-        if (finishedBinding?.authorised && finishedBinding.reason === 'BOUND_TO_ACCEPTED_TURN') {
-          // RC5: the provider's own reply to a code-owned protected turn has ended; start the grace
-          // window for it to emit reverse_last_scan before code delivers the outcome itself.
+        if (finishedBinding && (finishedBinding.reason === 'BOUND_TO_ACCEPTED_TURN' || finishedBinding.reason === 'CODE_OWNED_INITIAL_REPLY')) {
+          // VS-014: whether the autonomous initial reply was authorised (legacy tests) or suppressed
+          // (Single Owner runtime), its reply.done is the safe boundary after which code requests
+          // the one audible verified CODE_CONTINUATION.
           for (const entry of this.codeOwned.values()) {
             if (entry.turnId === finishedBinding.turnId && entry.initialReplyDoneAt == null) {
               entry.initialReplyDoneAt = Date.now();
