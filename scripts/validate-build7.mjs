@@ -117,6 +117,8 @@ check('Bare wake phrase is classified as control-only', transcript.includes('isW
 check('Wake-only control bypasses CommandRegistry mutation path', voice.indexOf('if (isWakeControlUtterance(text))') < voice.indexOf('this.commandRegistry.acceptFinalTranscript(text)'));
 check('READY E2 clarification continuity is command-bound', commands.includes("active.workflow === 'E2_MISSING_INVENTORY'") && commands.includes('isWakeQualifiedShortResponse(text)') && commands.includes('fillPendingClarification'));
 check('E2 prompt forbids redundant yes/no confirmation once typed EMPTY is complete', voice.includes('do NOT ask Did you check that location') && voice.includes('refresh it by calling check_inventory again under the SAME discrepancy command'));
+check('READY E2 state is bridged into provider context before generic fallback', voice.includes('reliability.e2_provider_bridge') && voice.includes('E2_MISSING_INVENTORY is READY') && voice.includes('Immediately call check_inventory'));
+check('Voice agent never asks worker to provide a system note', voice.includes('NEVER ask the worker to provide a system note'));
 check('Long transcript/tool/reliability histories preserve stress-test evidence', voicePanel.includes('const TRANSCRIPT_HISTORY = 500') && voicePanel.includes('const TOOL_HISTORY = 100') && voicePanel.includes('const RELIABILITY_HISTORY = 200'));
 check('Transcript evidence controls exist', voicePanel.includes('Copy transcript') && voicePanel.includes('Export transcript JSON') && voicePanel.includes('voicestrike-transcript-'));
 
