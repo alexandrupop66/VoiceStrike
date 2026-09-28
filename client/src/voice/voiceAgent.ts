@@ -1396,9 +1396,18 @@ export class VoiceAgentClient {
     if (!callId || !name) return;
 
     const epoch = this.epochs.current();
-    // RC4: ownership comes only from the reply-causality ledger. A null owner is NOT replaced by
-    // CommandRegistry's reply fallback: an unattributable call is refused before any endpoint.
-    const causalCommandId = internal ? internal.commandId : this.replyAuthority.commandIdForToolRequest(name);
+    // VS-014 Single Owner: operational tools are not advertised to the provider. If a stale or
+    // in-flight provider nevertheless emits the exact tool currently owned by code, it may only JOIN
+    // that same code-owned action. This closes the tool.call-before-reply.started hole without ever
+    // attributing arbitrary pre-reply tools to a newer command.
+    const acceptedAuthority = this.turnAuthorities.current();
+    const exactCodeOwned = !internal && acceptedAuthority
+      ? this.codeOwned.get(`${acceptedAuthority.turnId}|${acceptedAuthority.commandId}`) ?? null
+      : null;
+    const exactCodeOwnedOwner = exactCodeOwned && this.codeOwnedExpectedTool(exactCodeOwned) === name ? exactCodeOwned : null;
+    const causalCommandId = internal
+      ? internal.commandId
+      : exactCodeOwnedOwner?.commandId ?? this.replyAuthority.commandIdForToolRequest(name);
     const commandId = this.commandRegistry.commandForToolCall(causalCommandId ?? '');
     const transcriptContext = commandId ? this.commandRegistry.contextFor(commandId) : '';
     const mutation = isMutationToolName(name) || MUTATION_TOOLS.has(name as MutationToolName);
@@ -1427,10 +1436,7 @@ export class VoiceAgentClient {
     // RC5: a provider reverse_last_scan for a command whose protected step is already owned by code
     // joins that execution. It can never start a second preparation or a second mutation.
     const candidateOwned = !internal && commandId ? this.codeOwnedFor(commandId) : null;
-    const joined = candidateOwned && (
-      (candidateOwned.stage === 'E2' && name === 'check_inventory') ||
-      (candidateOwned.stage !== 'E2' && name === 'reverse_last_scan')
-    ) ? candidateOwned : null;
+    const joined = candidateOwned && this.codeOwnedExpectedTool(candidateOwned) === name ? candidateOwned : null;
     if (joined) {
       joined.providerCallSeen = true;
       if (!joined.deliveredVia) joined.deliveredVia = 'TOOL';
@@ -1927,7 +1933,10 @@ export class VoiceAgentClient {
           } else {
             result = payload;
             this.noteAuthoritativeRead(commandId, name, args, payload);
-            if (name === 'check_inventory' && this.commandRegistry.workflowFor(commandId) === 'E2_MISSING_INVENTORY') {
+            if (name === 'check_component' && this.commandRegistry.workflowFor(commandId) === 'E1_WRONG_COMPONENT') {
+              deterministicWorkflow = await this.continueDeterministicE1(commandId, authority, callId, evidence);
+              if (deterministicWorkflow) result = { ...payload, deterministic_workflow: deterministicWorkflow };
+            } else if (name === 'check_inventory' && this.commandRegistry.workflowFor(commandId) === 'E2_MISSING_INVENTORY') {
               deterministicWorkflow = await this.continueDeterministicE2(commandId, authority, callId, evidence);
               if (deterministicWorkflow) result = { ...payload, deterministic_workflow: deterministicWorkflow };
             }
