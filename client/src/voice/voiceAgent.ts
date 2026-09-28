@@ -2375,13 +2375,14 @@ export class VoiceAgentClient {
       if (!retry()) this.deliverCodeOwnedContextOnly(entry, 'PROVIDER_BUSY');
       return;
     }
-    this.sendProviderContextNote(this.codeOwnedFacts(entry));
+    const verifiedFacts = this.codeOwnedFacts(entry);
+    this.sendProviderContextNote(verifiedFacts);
     this.replyAuthority.expectCodeReply(entry.commandId);
     this.replyAuthority.releaseCodeWork(entry.syntheticCallId);
     entry.deliveredVia = 'CODE';
     this.ws.send(JSON.stringify({
       type: 'reply.create',
-      instructions: 'Report the latest VoiceStrike system note to the worker in one or two short sentences, exactly as stated. Do not call any tool. Speak identifiers compactly.',
+      instructions: `Respond to the worker now using only this verified VoiceStrike result: ${verifiedFacts} Do not ask for a system note or command. Do not call any tool. Speak identifiers compactly.`,
     }));
     emitReliabilityTelemetry({
       event: 'reliability.code_owned_action_delivered',
