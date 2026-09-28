@@ -2411,6 +2411,39 @@ export class VoiceAgentClient {
   private codeOwnedFacts(entry: CodeOwnedAction): string {
     const record = entry.result?.result && typeof entry.result.result === 'object' ? entry.result.result as Record<string, unknown> : {};
     const outcome = String(record.reliability_outcome ?? record.error ?? 'UNKNOWN');
+    if (entry.stage === 'E1') {
+      const workflow = record.deterministic_workflow && typeof record.deterministic_workflow === 'object'
+        ? record.deterministic_workflow as Record<string, unknown>
+        : null;
+      const inventoryPayload = workflow?.inventory && typeof workflow.inventory === 'object'
+        ? workflow.inventory as Record<string, unknown>
+        : null;
+      const inventory = inventoryPayload?.inventory && typeof inventoryPayload.inventory === 'object'
+        ? inventoryPayload.inventory as Record<string, unknown>
+        : null;
+      const expected = String(workflow?.expected_component ?? inventory?.component ?? '');
+      const location = String(inventory?.location ?? '');
+      const quantity = Number(inventory?.quantity ?? 0);
+      if (workflow?.completed === true && workflow?.mismatch === true &&
+        workflow?.exception_verified === true && workflow?.job_blocked_verified === true) {
+        return `VoiceStrike verified that ${entry.componentId} is the wrong component; the required component is ${expected}. The mismatch was logged and the job is blocked.${location ? ` ${quantity} ${expected} are available at ${location}.` : ''} Report exactly those verified facts.`;
+      }
+      if (workflow?.completed === true && workflow?.mismatch === false) {
+        return `VoiceStrike verified that ${entry.componentId} matches the current job requirement. No wrong-component exception or block was created.`;
+      }
+      return `VoiceStrike could not complete the verified wrong-component workflow for ${entry.componentId}. Do not claim that an exception was logged or that the job was blocked.`;
+    }
+    if (entry.stage === 'E3_INSPECT') {
+      const action = record.action && typeof record.action === 'object'
+        ? record.action as Record<string, unknown>
+        : null;
+      const component = String(action?.component ?? '').toUpperCase();
+      const actionId = String(action?.id ?? '');
+      if (record.ok === true && action?.recovery_eligible === true && component && actionId) {
+        return `VoiceStrike verified that the latest reversible scan is ${actionId} for component ${component}. Ask the worker to say exactly: "VoiceStrike, reverse scan ${component}". Nothing has been reversed yet.`;
+      }
+      return 'VoiceStrike inspected the latest action and did not find a reversible unreversed scan matching this recovery request. Do not claim a reversal is available.';
+    }
     if (entry.stage === 'E2') {
       const workflow = record.deterministic_workflow && typeof record.deterministic_workflow === 'object'
         ? record.deterministic_workflow as Record<string, unknown>
@@ -2427,6 +2460,9 @@ export class VoiceAgentClient {
       if (workflow?.completed === true && discrepancy?.ok === true && alternativePayload?.ok === true && alternative) {
         const location = String(alternative.location ?? '');
         const quantity = Number(alternative.quantity ?? 0);
+        if (discrepancy.already_unavailable === true) {
+          return `VoiceStrike verified that the reported primary location is already operationally unavailable and found ${quantity} ${entry.componentId} at location ${location}. Report exactly those verified facts; do not claim a new discrepancy was logged.`;
+        }
         return `VoiceStrike verified the reported empty primary location, logged the inventory discrepancy, and found ${quantity} ${entry.componentId} at location ${location}. Report exactly those verified facts.`;
       }
       return `VoiceStrike could not complete the verified missing-inventory workflow for ${entry.componentId}. Do not claim that a discrepancy was logged or that alternative stock was found.`;
