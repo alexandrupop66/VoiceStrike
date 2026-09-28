@@ -23,6 +23,15 @@ function runLongSession(iteration: number): void {
   let reversalMutations = 0;
   let discrepancyMutations = 0;
 
+  const exactE1 = registry.acceptFinalTranscript("VoiceStrike, I've got B184, but this job needs B148.");
+  check(`${prefix} E1 exact runtime phrase resolves observed B184`,
+    exactE1.workflow === 'E1_WRONG_COMPONENT' &&
+    exactE1.status === 'READY' &&
+    exactE1.slots.observedComponent === 'B184');
+  const exactE1Args = registry.bindToolArguments(exactE1.id, 'check_component', { component_id: 'B148' });
+  check(`${prefix} E1 exact runtime phrase binds check_component to B184`, exactE1Args.component_id === 'B184');
+  registry.markComplete(exactE1.id);
+
   const a = registry.acceptFinalTranscript('VoiceStrike, what is my current job?');
   check(`${prefix} A READ_JOB ready`, a.workflow === 'READ_JOB' && a.status === 'READY');
   registry.noteToolResult(a.id, 'get_current_job', { ok: true, job: { id: 'JOB-482', station: '3040', expected_component: 'B148', status: 'IN_PROGRESS' } });
