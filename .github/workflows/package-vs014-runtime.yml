@@ -22,9 +22,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          COMMIT="877e6e3a76468a492d34d47608416faeb5a8879e"
+          COMMIT="9ca18e25fe1f17df460ca3b961d38593f4ff115d"
           ROOT="VoiceStrike_VS014_Runtime"
-          ZIP="VoiceStrike_VS014_Runtime_877e6e3.zip"
+          ZIP="VoiceStrike_VS014_Runtime_9ca18e2.zip"
           rm -rf package "$ZIP" "$ZIP.sha256"
           mkdir -p "package/$ROOT"
           git archive --format=tar "$COMMIT" | tar -x -C "package/$ROOT"
@@ -36,9 +36,9 @@ jobs:
       - name: Upload source package
         uses: actions/upload-artifact@v4
         with:
-          name: VoiceStrike_VS014_Runtime_877e6e3
+          name: VoiceStrike_VS014_Runtime_9ca18e2
           path: |
-            VoiceStrike_VS014_Runtime_877e6e3.zip
-            VoiceStrike_VS014_Runtime_877e6e3.zip.sha256
+            VoiceStrike_VS014_Runtime_9ca18e2.zip
+            VoiceStrike_VS014_Runtime_9ca18e2.zip.sha256
           if-no-files-found: error
           retention-days: 14
