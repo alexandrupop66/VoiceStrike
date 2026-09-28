@@ -938,6 +938,30 @@ export class VoiceAgentClient {
           }
         }
 
+        // E1 runtime bridge: once deterministic parsing has a single observed component,
+        // the provider must start the authoritative comparison instead of narrating or asking
+        // the worker to repeat already-resolved facts.
+        if (command.workflow === 'E1_WRONG_COMPONENT' && command.status === 'READY') {
+          const observed = command.slots.observedComponent;
+          if (observed) {
+            this.sendProviderContextNote(
+              `VoiceStrike deterministic command state: E1_WRONG_COMPONENT is READY. The accepted worker turn identifies observed component ${observed}. Do not state the expected component from worker speech as system fact and do not ask the worker to repeat. Immediately call check_component for ${observed}. Follow the existing verified E1 sequence only from authoritative tool results.`,
+            );
+            emitReliabilityTelemetry({
+              event: 'reliability.provider_context_note',
+              sessionId: this.sessionId,
+              epoch: this.epochs.current(),
+              turnId: id,
+              commandId: command.id,
+              intent: command.intent,
+              entityKind: 'component_id',
+              entityValue: observed,
+              resultClass: 'E1_READY',
+              detail: `observed=${observed}; provider instructed to start check_component`,
+            });
+          }
+        }
+
         if (criticalTrust.critical && protectedWindowDecision?.trusted) {
           const consumedWindow = this.protectedSpeechWindows.consume(protectedWindowDecision.window.id);
           if (consumedWindow) {
