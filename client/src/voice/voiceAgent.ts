@@ -929,15 +929,17 @@ export class VoiceAgentClient {
           componentId: criticalTrust.componentId ?? command.entities.find((entity) => entity.kind === 'component_id')?.canonicalValue ?? null,
         });
 
-        // VS-010: once E2 owns component + reported location + explicit EMPTY, code owns the
-        // authoritative inventory read and deterministic continuation. The provider may narrate or
-        // join the read, but it is no longer required to choose check_inventory correctly.
-        if (!cancellation.cancel && command.workflow === 'E2_MISSING_INVENTORY' && command.status === 'READY' &&
-          command.slots.observedEmpty === true && command.slots.component && command.slots.reportedLocation &&
-          !command.evidence.discrepancy) {
-          // VS-012: READY is the deterministic ownership transition. Even if a read occurred while
-          // COLLECTING, code performs a fresh command-bound read here before any mutation.
-          this.startCodeOwnedE2(id, command.id);
+        // VS-014 Single Owner: once an operational command is READY, code owns the workflow.
+        // The provider is only a speech renderer and never chooses or executes operational tools.
+        if (!cancellation.cancel && command.status === 'READY') {
+          if (command.workflow === 'E1_WRONG_COMPONENT' && command.slots.observedComponent) {
+            this.startCodeOwnedE1(id, command.id);
+          } else if (command.workflow === 'E2_MISSING_INVENTORY' &&
+            command.slots.observedEmpty === true && command.slots.component && command.slots.reportedLocation) {
+            this.startCodeOwnedE2(id, command.id);
+          } else if (command.workflow === 'E3_MISTAKEN_SCAN' && command.phase === 'VERIFY' && command.slots.component && criticalTrust.kind === 'NONE') {
+            this.startCodeOwnedE3Inspect(id, command.id);
+          }
         }
 
         if (criticalTrust.critical && protectedWindowDecision?.trusted) {
