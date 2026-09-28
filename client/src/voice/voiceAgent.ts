@@ -2889,6 +2889,146 @@ export class VoiceAgentClient {
     emitReliabilityTelemetry({ event: 'reliability.workflow_phase', sessionId: this.sessionId, commandId, tool: name, attempted: true, outcome: 'VERIFIED_SUCCESS', resultClass: this.workflow.phase(commandId), detail: `verified ${name}; phase=${this.workflow.phase(commandId)}` });
   }
 
+  /** VS-014 Single Owner — deterministic E1 chain: mismatch -> verified exception ->
+   * verified block -> authoritative inventory read. Provider ordering cannot choose these steps. */
+  private async continueDeterministicE1(
+    commandId: string,
+    authority: TurnAuthority,
+    _parentCallId: string,
+    evidence: ClaimEvidence,
+  ): Promise<Record<string, unknown> | null> {
+    const command = this.commandRegistry.get(commandId);
+    if (!command || command.workflow !== 'E1_WRONG_COMPONENT' || command.status !== 'READY' || !command.slots.observedComponent) return null;
+    const check = command.evidence.componentCheck;
+    if (!check) return null;
+    const verdict = String(check.verdict ?? '').toUpperCase();
+    const expected = String(check.expected_component ?? command.slots.expectedComponent ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (verdict !== 'MISMATCH') {
+      this.commandRegistry.markComplete(commandId);
+      return {
+        workflow: 'E1_WRONG_COMPONENT',
+        completed: true,
+        mismatch: false,
+        observed_component: command.slots.observedComponent,
+        expected_component: expected,
+      };
+    }
+
+    const runMutation = async (name: MutationToolName, proposed: Record<string, unknown>) => {
+      const args = this.commandRegistry.bindToolArguments(commandId, name, proposed);
+      const precondition = this.workflow.assess(commandId, name, args);
+      if (!precondition.ok) {
+        return { ok: false as const, outcome: 'NEEDS_CLARIFICATION', detail: precondition.message };
+      }
+      evidence.record('MUTATION_STARTED');
+      this.inFlightMutation = { commandId, name, args };
+      const actionResult = await executeVerifiedAction({
+        commandId,
+        toolName: name,
+        transcriptContext: this.commandRegistry.contextFor(commandId),
+        commandSlots: this.commandRegistry.slotsFor(commandId) ?? {},
+        args,
+        sessionId: this.sessionId,
+        turnId: authority.turnId,
+        isCommandCurrent: () => this.commandRegistry.isCurrent(commandId),
+        isCommandReady: () => this.commandRegistry.isReady(commandId),
+        request: async () => {
+          const request = this.buildToolRequest(name, args, commandId, this.commandRegistry.contextFor(commandId), authority);
+          this.turnAuthorities.consumeMutation(authority, name);
+          emitReliabilityTelemetry({
+            event: 'reliability.tool_attempted',
+            sessionId: this.sessionId,
+            epoch: this.epochs.current(),
+            turnId: authority.turnId,
+            commandId,
+            authorityId: `${authority.turnId}|${authority.commandId}`,
+            tool: name,
+            attempted: true,
+            resultClass: 'DETERMINISTIC_E1_MUTATION_REQUEST_SENT',
+          });
+          return fetch(request.url, request.init);
+        },
+      });
+      this.inFlightMutation = null;
+      if (!canClaimSuccess(actionResult)) {
+        return { ok: false as const, outcome: actionResult.outcome, detail: actionResult.error };
+      }
+      evidence.record('MUTATION_COMPLETED');
+      evidence.record('VERIFICATION_STARTED');
+      evidence.record('VERIFICATION_PASSED');
+      evidence.record('VERIFIED_SUCCESS');
+      this.noteVerifiedMutation(commandId, name, args, actionResult.data);
+      return { ok: true as const, actionResult };
+    };
+
+    const exception = await runMutation('report_exception', {
+      type: 'WRONG_COMPONENT',
+      observed_component: command.slots.observedComponent,
+      details: `Observed ${command.slots.observedComponent}; expected ${expected}.`,
+    });
+    if (!exception.ok) {
+      return {
+        workflow: 'E1_WRONG_COMPONENT',
+        completed: false,
+        mismatch: true,
+        expected_component: expected,
+        failed_stage: 'report_exception',
+        outcome: exception.outcome,
+        detail: exception.detail,
+      };
+    }
+
+    const blocked = await runMutation('update_job_status', { status: 'BLOCKED' });
+    if (!blocked.ok) {
+      return {
+        workflow: 'E1_WRONG_COMPONENT',
+        completed: false,
+        mismatch: true,
+        expected_component: expected,
+        exception_verified: true,
+        failed_stage: 'update_job_status',
+        outcome: blocked.outcome,
+        detail: blocked.detail,
+      };
+    }
+
+    const inventoryArgs = this.commandRegistry.bindToolArguments(commandId, 'check_inventory', { component_id: expected });
+    try {
+      const request = this.buildToolRequest('check_inventory', inventoryArgs, commandId, this.commandRegistry.contextFor(commandId), authority);
+      const response = await fetch(request.url, request.init);
+      const payload = await response.json().catch(() => ({
+        ok: false,
+        error: `HTTP_${response.status}`,
+      })) as Record<string, unknown>;
+      if (response.ok && payload.ok === true) {
+        this.noteAuthoritativeRead(commandId, 'check_inventory', inventoryArgs, payload);
+      }
+      this.commandRegistry.markComplete(commandId);
+      return {
+        workflow: 'E1_WRONG_COMPONENT',
+        completed: true,
+        mismatch: true,
+        observed_component: command.slots.observedComponent,
+        expected_component: expected,
+        exception_verified: true,
+        job_blocked_verified: true,
+        inventory: payload,
+      };
+    } catch (error) {
+      this.commandRegistry.markComplete(commandId);
+      return {
+        workflow: 'E1_WRONG_COMPONENT',
+        completed: true,
+        mismatch: true,
+        observed_component: command.slots.observedComponent,
+        expected_component: expected,
+        exception_verified: true,
+        job_blocked_verified: true,
+        inventory: { ok: false, error: error instanceof Error ? error.message : 'INVENTORY_READ_FAILED' },
+      };
+    }
+  }
+
   /**
    * v0.10.0 RC2 — once E2 owns component + location + EMPTY and the authoritative inventory
    * read confirms positive stock at that exact primary location, code owns the rest of the
