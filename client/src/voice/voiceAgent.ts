@@ -3050,7 +3050,45 @@ export class VoiceAgentClient {
     const component = String(inventory.component ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
     const location = String(inventory.location ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
     const quantity = Number(inventory.quantity ?? 0);
-    if (component !== command.slots.component || location !== command.slots.reportedLocation || quantity <= 0) return null;
+    if (component !== command.slots.component || location !== command.slots.reportedLocation) return null;
+
+    // VS-014 idempotency: if the exact primary location is already unavailable, do not retry
+    // the discrepancy mutation. Refresh authoritative alternative evidence only.
+    if (quantity <= 0) {
+      const altName = 'find_alternative_inventory';
+      const altArgs = this.commandRegistry.bindToolArguments(commandId, altName, {});
+      try {
+        const altRequest = this.buildToolRequest(altName, altArgs, commandId, this.commandRegistry.contextFor(commandId), authority);
+        const altResponse = await fetch(altRequest.url, altRequest.init);
+        const altPayload = await altResponse.json().catch(() => ({
+          ok: false,
+          error: `HTTP_${altResponse.status}`,
+        })) as Record<string, unknown>;
+        if (altResponse.ok && altPayload.ok === true) {
+          this.noteAuthoritativeRead(commandId, altName, altArgs, altPayload);
+          this.commandRegistry.markComplete(commandId);
+          return {
+            workflow: 'E2_MISSING_INVENTORY',
+            completed: true,
+            discrepancy: { ok: true, verified: true, already_unavailable: true },
+            alternative: altPayload,
+          };
+        }
+        return {
+          workflow: 'E2_MISSING_INVENTORY',
+          completed: false,
+          discrepancy: { ok: true, verified: true, already_unavailable: true },
+          alternative: altPayload,
+        };
+      } catch (error) {
+        return {
+          workflow: 'E2_MISSING_INVENTORY',
+          completed: false,
+          discrepancy: { ok: true, verified: true, already_unavailable: true },
+          alternative: { ok: false, error: error instanceof Error ? error.message : 'ALTERNATIVE_READ_FAILED' },
+        };
+      }
+    }
 
     const mutationName: MutationToolName = 'report_inventory_discrepancy';
     const mutationArgs = this.commandRegistry.bindToolArguments(commandId, mutationName, {});
