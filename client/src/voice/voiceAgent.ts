@@ -64,7 +64,7 @@ type PendingTool = {
 };
 
 /** RC5: code-owned protected reversal stage (the LLM narrates; code decides and executes). */
-type CodeOwnedStage = 'PREPARE' | 'CONFIRM' | 'E2';
+type CodeOwnedStage = 'E1' | 'E2' | 'E3_INSPECT' | 'PREPARE' | 'CONFIRM';
 type CodeOwnedAction = {
   key: string;
   syntheticCallId: string;
@@ -84,7 +84,7 @@ type CodeOwnedAction = {
 type ToolCallInternal = { commandId: string; codeOwned: CodeOwnedAction };
 
 /** RC5: time the provider gets to emit its own reverse_last_scan before code delivers the outcome. */
-const CODE_DELIVERY_GRACE_MS = 1_200;
+const CODE_DELIVERY_GRACE_MS = 0;
 const CODE_DELIVERY_RETRY_MS = 400;
 const CODE_DELIVERY_MAX_ATTEMPTS = 25;
 /** 24 kHz mono PCM16: samples per millisecond. */
@@ -434,6 +434,7 @@ export class VoiceAgentClient {
           session: {
             system_prompt: [
               'You are VoiceStrike, a frontline exception copilot in a warehouse/manufacturing hackathon prototype.',
+              'VS-014 SINGLE OWNER: VoiceStrike code, not the language model, owns every operational read, mutation, verification, and recovery step for E1/E2/E3. No operational tools are available to you. Never invent, simulate, or claim an operational result from conversation context. When VoiceStrike code supplies a system note and requests a reply, report only those verified facts.',
               'Keep replies concise, factual, and operational.',
               'Operational state must come from tools, never conversation memory or guesses.',
               'For a suspected wrong component: first get the current job if needed, then call check_component with the observed component.',
@@ -478,7 +479,9 @@ export class VoiceAgentClient {
               'After verified recovery, say that the specific scan was reversed and that the recovery was verified. Never claim success from conversational intent alone.',
             ].join(' '),
             greeting: 'VoiceStrike is connected. Say VoiceStrike to begin. I can handle wrong-component, missing-inventory, and mistaken-scan recovery.',
-            tools: TOOLS,
+            // VS-014 Single Owner: AssemblyAI supplies STT/LLM/TTS only. Operational execution
+            // belongs exclusively to VoiceStrike code; autonomous provider tool orchestration is disabled.
+            tools: [],
             input: {
               format: { encoding: 'audio/pcm' },
               keyterms: new URLSearchParams(window.location.search).get('keyterms') === 'off'
