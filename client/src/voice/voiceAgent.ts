@@ -445,7 +445,7 @@ export class VoiceAgentClient {
               'A tool mutation result is not verified success. Only an independent authoritative verification may justify a success claim.',
               'If a mutation may have happened but the result is unknown, never retry the mutation blindly. Inspect authoritative state first.',
               'If a tool result says STALE_COMMAND, NEEDS_CLARIFICATION, VERIFY_FAILED, or UNKNOWN_ACTION_STATE, do not claim success and do not work around the safety gate.',
-              'Protected mistaken-scan reversal is executed by VoiceStrike code, not by you: after a trusted "VoiceStrike, reverse scan <component>" VoiceStrike prepares it, and after a trusted "VoiceStrike, confirm reverse scan <component>" VoiceStrike executes and independently verifies it. You may call reverse_last_scan; it returns the code-owned result. If you receive a system note with a verified outcome, report exactly that outcome and nothing more. Never say a reversal happened unless the result says VERIFIED_SUCCESS.',
+              'Protected mistaken-scan reversal is executed by VoiceStrike code, not by you: after a trusted "VoiceStrike, reverse scan <component>" VoiceStrike prepares it, and after a trusted "VoiceStrike, confirm reverse scan <component>" VoiceStrike executes and independently verifies it. You may call reverse_last_scan; it returns the code-owned result. System notes are used only to deliver code-owned verified context; NEVER ask the worker to provide a system note. Worker speech such as "VoiceStrike B148 isn't at C12. The location is empty." is itself an operational command. If you receive a system note with a verified outcome, report exactly that outcome and nothing more. Never say a reversal happened unless the result says VERIFIED_SUCCESS.',
               'Speak component and location identifiers compactly (B148, C12, D05), never digit by digit.',
               'Tool authority is bound to the exact accepted worker turn and command. If a tool result says TURN_AUTHORITY_REQUIRED, ask the worker to say VoiceStrike and repeat the request in a new turn. If it says AUTHORITY_ALREADY_CONSUMED, that mutation was already attempted for this turn: never call it again; inspect authoritative state instead.',
               'Do not treat a bare yes, no, okay, done, or other short utterance as authorization for any unrelated operational action.',
@@ -910,6 +910,33 @@ export class VoiceAgentClient {
           intent: command.intent,
           componentId: criticalTrust.componentId ?? command.entities.find((entity) => entity.kind === 'component_id')?.canonicalValue ?? null,
         });
+
+        // v0.9.6 — bridge deterministic E2 readiness into the provider conversation.
+        // CommandRegistry already resolved the worker's typed component/location/EMPTY facts.
+        // The provider must not fall back to generic "ready / provide a system note" prose and
+        // wait for information VoiceStrike already has. This note grants no mutation authority:
+        // all reads/mutations still pass the existing turn, workflow and verification gates.
+        if (command.workflow === 'E2_MISSING_INVENTORY' && command.status === 'READY') {
+          const component = command.slots.component;
+          const location = command.slots.reportedLocation;
+          if (component && location && command.slots.observedEmpty === true) {
+            this.sendProviderContextNote(
+              `VoiceStrike deterministic command state: E2_MISSING_INVENTORY is READY. The accepted worker turn explicitly reports component ${component} missing from system location ${location}, and the location is EMPTY. This worker turn is the operational command; do not ask for a system note, confirmation, or repeated facts. Immediately call check_inventory for ${component}. Existing deterministic VoiceStrike code will authorise and continue the verified E2 workflow from that read result.`,
+            );
+            emitReliabilityTelemetry({
+              event: 'reliability.e2_provider_bridge',
+              sessionId: this.sessionId,
+              epoch: this.epochs.current(),
+              turnId: id,
+              commandId: command.id,
+              intent: command.intent,
+              entityKind: 'component_id',
+              entityValue: component,
+              resultClass: 'E2_READY',
+              detail: `component=${component}; location=${location}; observed_empty=true; provider instructed to start check_inventory`,
+            });
+          }
+        }
 
         if (criticalTrust.critical && protectedWindowDecision?.trusted) {
           const consumedWindow = this.protectedSpeechWindows.consume(protectedWindowDecision.window.id);
