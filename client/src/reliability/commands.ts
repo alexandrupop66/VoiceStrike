@@ -34,6 +34,28 @@ function resolvedComponent(text: string): CriticalEntityResolution {
   return resolveCorrectedTechnicalEntity('component_id', text);
 }
 
+function resolvedObservedE1Component(text: string): CriticalEntityResolution {
+  const raw = String(text ?? '');
+  // In natural E1 speech, the worker-owned object after got/have/holding is the observed
+  // component. This prevents a simultaneously spoken expected component ("job needs B148")
+  // from making the observed component ambiguous.
+  const observedCue = /\b(?:i(?:'ve| have)?\s+)?(?:got|have|having|holding)\s+([^,.!?;]{1,36})/i.exec(raw);
+  if (observedCue?.[1]) {
+    const ids = extractTechnicalIds(observedCue[1], 'component_id');
+    if (ids.length === 1) {
+      return {
+        kind: 'component_id',
+        rawValues: [observedCue[1]],
+        canonicalValue: ids[0],
+        status: 'RESOLVED',
+        source: 'CURRENT_UTTERANCE',
+        candidates: ids,
+      };
+    }
+  }
+  return resolvedComponent(raw);
+}
+
 function canonical(entity: CriticalEntityResolution): string | undefined {
   return isResolved(entity) ? entity.canonicalValue : undefined;
 }
@@ -116,7 +138,7 @@ function applyTypedText(command: PendingCommand, text: string): void {
     command.phase = command.pendingClarification ? 'CLARIFY' : 'VERIFY'; command.status = command.pendingClarification ? 'COLLECTING' : 'READY'; refreshEntities(command); return;
   }
   if (command.workflow === 'E1_WRONG_COMPONENT') {
-    const component = resolvedComponent(text);
+    const component = resolvedObservedE1Component(text);
     if (isResolved(component) && component.canonicalValue) command.slots.observedComponent = component.canonicalValue;
     else if (component.status === 'AMBIGUOUS') command.entities = [component];
     command.pendingClarification = command.slots.observedComponent ? undefined : { workflow: command.workflow, field: 'observedComponent', allowedType: 'component_id' };
