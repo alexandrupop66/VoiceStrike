@@ -56,5 +56,22 @@ check('VS-001 VERIFIED_SUCCESS blocks contradictory failure narration', assessAg
 check('VS-001 failed authoritative outcome permits truthful failure narration', assessAgentReplyClaims('I could not complete the reversal.', e3Command, { state: 'FINAL', outcome: 'VERIFY_FAILED', verified: false }).allowed);
 check('VS-001 failed authoritative outcome still blocks success narration', assessAgentReplyClaims('The reversal has been completed.', e3Command, { state: 'FINAL', outcome: 'VERIFY_FAILED', verified: false }).code === 'UNVERIFIED_MUTATION_CLAIM');
 
+
+// VS-013: a stale provider-side tool refusal must never override the code-owned E2 truth.
+// Exact live symptom: E2 is accepted, but the provider narrates "say VoiceStrike and repeat"
+// from a stale/unattributable tool.call while the deterministic E2 path is pending or verified.
+const e2LiveRegistry = new CommandRegistry();
+const e2Live = e2LiveRegistry.acceptFinalTranscript("VoiceStrike, B148 isn't at C12. The location is empty.");
+const e2LiveCommand = e2LiveRegistry.get(e2Live.id);
+const staleProviderRefusal = 'Operational tools require an accepted, wake-authorised worker turn bound to this command. Please say VoiceStrike and repeat the request.';
+check(
+  'VS-013 pending code-owned E2 blocks stale provider authority/refusal narration',
+  assessAgentReplyClaims(staleProviderRefusal, e2LiveCommand, null, { state: 'PENDING' }).code === 'UNVERIFIED_FAILURE_CLAIM',
+);
+check(
+  'VS-013 verified code-owned E2 blocks stale provider authority/refusal narration',
+  assessAgentReplyClaims(staleProviderRefusal, e2LiveCommand, null, { state: 'FINAL', outcome: 'VERIFIED_SUCCESS', verified: true }).code === 'CONTRADICTS_VERIFIED_RESULT',
+);
+
 console.log(`\nVoiceStrike RC5 claim gate: ${passed} passed, ${failed} failed.`);
 if (failed > 0) throw new Error(`RC5 claim regressions failed: ${failed}`);
