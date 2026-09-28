@@ -197,6 +197,16 @@ check('RC5 provider reverse_last_scan joins code execution (no second mutation)'
   voice.includes("if (entry.stage === 'E3_INSPECT') return 'inspect_last_action';") &&
   voice.includes("return 'reverse_last_scan';"));
 check('RC5 code outcome delivered by conversation.message + reply.create only when nothing is owed', voice.includes("type: 'reply.create'") && voice.includes("type: 'conversation.message', role: 'system'") && voice.includes('this.replyAuthority.canRequestCodeReply(entry.commandId, entry.syntheticCallId)'));
+check('VS-014 Single Owner does not advertise operational tools to the provider',
+  voice.includes('tools: []') && voice.includes('VS-014 Single Owner'));
+check('VS-014 E1 E2 and initial E3 are started by code from accepted READY commands',
+  voice.includes('this.startCodeOwnedE1(id, command.id)') &&
+  voice.includes('this.startCodeOwnedE2(id, command.id)') &&
+  voice.includes('this.startCodeOwnedE3Inspect(id, command.id)'));
+check('VS-014 autonomous operational initial replies are suppressed until code continuation',
+  voice.includes("demoteCurrentReply('CODE_OWNED_INITIAL_REPLY')") &&
+  replyAuthority.includes("'CODE_OWNED_INITIAL_REPLY'") &&
+  replyAuthority.includes("if (finished.reason === 'CODE_OWNED_INITIAL_REPLY')"));
 check('RC5 provider correlation can only downgrade reply authority', voice.includes("this.replyAuthority.demoteCurrentReply('PROVIDER_ITEM_REJECTED')") && replyAuthority.includes('demoteCurrentReply('));
 check('RC5 interrupted fc-<call_id> replies discard their call result', voice.includes("providerReplyId.startsWith('fc-')") && voice.includes('this.interruptedCallIds.has(tool.callId)'));
 check('RC5 regressions exist', existsSync(resolve(root, 'scripts/test-claims-rc5.mts')));
