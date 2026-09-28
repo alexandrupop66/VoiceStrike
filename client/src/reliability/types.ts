@@ -126,6 +126,7 @@ export type ReliabilityEventName =
   | 'reliability.code_owned_action_joined'
   | 'reliability.code_owned_action_delivered'
   | 'reliability.provider_context_note'
+  | 'reliability.e2_provider_bridge'
   | 'reliability.provider_correlation'
   | 'reliability.reply_audio_released'
   | 'reliability.verified_success'
