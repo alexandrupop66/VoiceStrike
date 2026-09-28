@@ -783,10 +783,10 @@ async function e2Ready(s: Session): Promise<void> {
   check('P28 VS-014 pre-reply provider call never returns TURN_AUTHORITY_REQUIRED on a code-owned E2 turn',
     providerResult.error !== 'TURN_AUTHORITY_REQUIRED' && !/accepted, wake-authorised worker turn/i.test(String(providerResult.message ?? '')),
     providerResult);
-  const preReplyAuth = since(mark, 'reliability.tool_authorisation_checked').find((t) => String(t.detail ?? '').includes(`call=${providerCall}`));
-  check('P28 VS-014 pre-reply provider call is owned/joined by the current E2 command, never causal_owner=NONE',
-    Boolean(preReplyAuth) && !String(preReplyAuth?.detail ?? '').includes('causal_owner=NONE'),
-    preReplyAuth?.detail);
+  const preReplyJoin = since(mark, 'reliability.code_owned_action_joined').find((t) => String(t.detail ?? '').includes(`provider_call=${providerCall}`));
+  check('P28 VS-014 pre-reply provider call is joined to the exact current E2 code-owned action',
+    Boolean(preReplyJoin) && preReplyJoin?.resultClass === 'E2' && Boolean(preReplyJoin?.commandId),
+    preReplyJoin);
 
   const firstDiscrepancies = endpointCalls.filter((entry) => entry.includes('/api/tools/report-inventory-discrepancy')).length;
   const firstAlternatives = endpointCalls.filter((entry) => entry.includes('/api/tools/find-alternative-inventory')).length;
