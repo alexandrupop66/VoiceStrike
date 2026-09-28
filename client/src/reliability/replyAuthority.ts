@@ -38,7 +38,9 @@ export type ReplyAuthorityReason =
   | 'NO_ACCEPTED_TURN'
   | 'SESSION_EPOCH_CHANGED'
   /** RC5: provider correlation says this reply answers a locally rejected transcript. */
-  | 'PROVIDER_ITEM_REJECTED';
+  | 'PROVIDER_ITEM_REJECTED'
+  /** VS-014: autonomous provider reply suppressed because code owns the operational turn. */
+  | 'CODE_OWNED_INITIAL_REPLY';
 
 export type ReplyBinding = {
   readonly replyId: string;
