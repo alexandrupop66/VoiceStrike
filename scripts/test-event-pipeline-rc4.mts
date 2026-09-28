@@ -826,6 +826,47 @@ async function e2Ready(s: Session): Promise<void> {
     { before: replyCreateBefore, after: s.sentOfType('reply.create').length, sent: s.sentOfType('reply.create') });
 }
 
+// P30 / VS-014 — E1 is fully code-owned: no provider tool.call is required.
+{
+  const s = await freshSession();
+  const mark = telemetry.length;
+  s.say('VoiceStrike, I have the wrong component B184.', 'u-vs014-e1');
+  s.reply({ text: 'I will check that.' }); // autonomous operational reply: must be suppressed
+  await s.settle(350);
+
+  const calls = [...endpointCalls];
+  check('P30 VS-014 E1 starts and completes under code ownership without provider tools',
+    since(mark, 'reliability.code_owned_action_started').some((t) => t.resultClass === 'E1') &&
+    since(mark, 'reliability.code_owned_action_completed').some((t) => t.resultClass === 'E1'),
+    since(mark, 'reliability.code_owned_action_completed'));
+  check('P30 VS-014 E1 performs verified exception, block, and expected-component inventory read',
+    calls.some((x) => x.includes('/api/tools/check-component')) &&
+    calls.filter((x) => x.includes('/api/tools/report-exception')).length === 1 &&
+    calls.filter((x) => x.includes('/api/tools/update-job-status')).length === 1 &&
+    calls.some((x) => x.includes('/api/tools/check-inventory')),
+    calls);
+  check('P30 VS-014 E1 requests one verified code-owned spoken continuation',
+    s.sentOfType('reply.create').length === 1,
+    s.sentOfType('reply.create'));
+}
+
+// P31 / VS-014 — the initial E3 inspect is code-owned too; provider never chooses inspect_last_action.
+{
+  const s = await freshSession();
+  const mark = telemetry.length;
+  s.say('VoiceStrike, I scanned B184 by mistake.', 'u-vs014-e3-inspect');
+  s.reply({ text: 'I will check the last scan.' }); // autonomous operational reply: suppressed
+  await s.settle(350);
+
+  check('P31 VS-014 E3 initial inspect runs under code ownership without provider tool.call',
+    since(mark, 'reliability.code_owned_action_started').some((t) => t.resultClass === 'E3_INSPECT') &&
+    endpointCalls.filter((x) => x.includes('/api/tools/inspect-last-action')).length === 1,
+    { telemetry: since(mark, 'reliability.code_owned_action_started'), endpointCalls });
+  check('P31 VS-014 E3 inspect requests one verified code-owned spoken continuation',
+    s.sentOfType('reply.create').length === 1,
+    s.sentOfType('reply.create'));
+}
+
 check('HARNESS no exception inside the provider event pipeline', handlerErrors.length === 0, handlerErrors.slice(0, 3));
 globalThis.fetch = realFetch;
 console.error = realConsoleError;
