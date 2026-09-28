@@ -1,0 +1,125 @@
+name: Package VoiceStrike VS-012 Runtime
+
+on:
+  push:
+    branches:
+      - package/VS-012-runtime-download-20260928
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout packaging branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build exact VS-012 runtime package
+        shell: bash
+        run: |
+          set -euo pipefail
+          COMMIT="1270454e8a028bf7504f6c9c44943827277bda14"
+          ROOT="VoiceStrike_VS012_Runtime"
+          ZIP="VoiceStrike_VS012_Runtime_1270454.zip"
+
+          rm -rf package "$ZIP" "$ZIP.sha256"
+          mkdir -p "package/$ROOT"
+
+          git archive --format=tar "$COMMIT" | tar -x -C "package/$ROOT"
+          rm -f "package/$ROOT/.env"
+          rm -rf "package/$ROOT/node_modules" "package/$ROOT/.test-dist"
+
+          cat > "package/$ROOT/START_VOICESTRIKE_VS012.cmd" <<'EOF'
+          @echo off
+          setlocal
+          cd /d "%~dp0"
+
+          where node >nul 2>nul
+          if errorlevel 1 (
+            echo [VoiceStrike] Node.js was not found in PATH.
+            echo Install Node.js 24 and run this launcher again.
+            pause
+            exit /b 1
+          )
+
+          if not exist ".env" (
+            echo [VoiceStrike] .env is missing.
+            echo Copy .env.example to .env and add your ASSEMBLYAI_API_KEY.
+            echo The real API key is intentionally NOT included in this package.
+            pause
+            exit /b 1
+          )
+
+          if not exist "node_modules" (
+            echo [VoiceStrike] Installing dependencies...
+            call npm install --workspaces --include-workspace-root --no-audit --no-fund
+            if errorlevel 1 goto :error
+          )
+
+          echo [VoiceStrike] Starting server and client...
+          echo Open http://localhost:5173/ after the services start.
+          call npm run dev
+          exit /b %errorlevel%
+
+          :error
+          echo [VoiceStrike] Dependency installation failed.
+          pause
+          exit /b 1
+          EOF
+
+          cat > "package/$ROOT/RUNTIME_PACKAGE_INFO.txt" <<'EOF'
+          VoiceStrike VS-012 Runtime Package
+          ==================================
+          Source commit:
+          1270454e8a028bf7504f6c9c44943827277bda14
+
+          Source branch:
+          fix/VS-012-e2-deterministic-clarification-owner
+
+          Automated evidence verified before packaging:
+          - GitHub Actions Windows: PASS
+          - GitHub Actions Ubuntu: PASS
+          - BUILD 7 structural: 246/246
+          - Reliability core: 410/410
+          - Command-context acceptance: 1068/1068
+          - Live-session regression: 26/26
+          - Lifecycle ledger: 35/35
+          - Claim gate: 26/26
+          - Event pipeline: 74/74
+          - VS-001 regression: 6/6
+          - Production build: PASS
+
+          Live microphone / AssemblyAI / browser acceptance:
+          NOT TESTED for this packaged candidate.
+
+          Start:
+          1. Copy .env.example to .env.
+          2. Put the real ASSEMBLYAI_API_KEY in .env.
+          3. Double-click START_VOICESTRIKE_VS012.cmd.
+          4. Open http://localhost:5173/
+
+          Security:
+          - No real .env file or API key is included.
+          - node_modules is not included.
+          - The runtime source is archived from the exact commit above.
+          EOF
+
+          (
+            cd package
+            zip -qr "../$ZIP" "$ROOT"
+          )
+          sha256sum "$ZIP" > "$ZIP.sha256"
+
+      - name: Upload runtime package
+        uses: actions/upload-artifact@v4
+        with:
+          name: VoiceStrike_VS012_Runtime_1270454
+          path: |
+            VoiceStrike_VS012_Runtime_1270454.zip
+            VoiceStrike_VS012_Runtime_1270454.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
