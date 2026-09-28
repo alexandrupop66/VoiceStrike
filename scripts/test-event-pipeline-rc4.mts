@@ -765,6 +765,47 @@ async function e2Ready(s: Session): Promise<void> {
     { beforeInventory, afterInventory, beforeDiscrepancy, afterDiscrepancy, endpointCalls });
 }
 
+// P28 / VS-014 — Single Owner: a provider tool.call before reply.started must never create
+// a competing operational result, and an idempotent repeated E2 must still recover verified
+// alternative evidence without a second discrepancy mutation.
+{
+  const s = await freshSession();
+  const mark = telemetry.length;
+  s.say("VoiceStrike, B148 isn't at C12. The location is empty.", 'u-vs014-e2-1');
+
+  // Real provider ordering seen live: tool.call may arrive before the first reply.started.
+  const providerCall = s.callId();
+  s.emit({ type: 'tool.call', call_id: providerCall, name: 'check_inventory', arguments: { component_id: 'B148' } });
+  s.emit({ type: 'reply.done', status: 'completed', reply_id: `fc-${providerCall}` });
+  await s.settle(180);
+
+  const providerResult = s.resultsFor(providerCall)[0] ?? {};
+  check('P28 VS-014 pre-reply provider call never returns TURN_AUTHORITY_REQUIRED on a code-owned E2 turn',
+    providerResult.error !== 'TURN_AUTHORITY_REQUIRED' && !/accepted, wake-authorised worker turn/i.test(String(providerResult.message ?? '')),
+    providerResult);
+  const preReplyAuth = since(mark, 'reliability.tool_authorisation_checked').find((t) => String(t.detail ?? '').includes(`call=${providerCall}`));
+  check('P28 VS-014 pre-reply provider call is owned/joined by the current E2 command, never causal_owner=NONE',
+    Boolean(preReplyAuth) && !String(preReplyAuth?.detail ?? '').includes('causal_owner=NONE'),
+    preReplyAuth?.detail);
+
+  const firstDiscrepancies = endpointCalls.filter((entry) => entry.includes('/api/tools/report-inventory-discrepancy')).length;
+  const firstAlternatives = endpointCalls.filter((entry) => entry.includes('/api/tools/find-alternative-inventory')).length;
+  check('P28 VS-014 first E2 performs one discrepancy mutation and authoritative alternative read',
+    firstDiscrepancies === 1 && firstAlternatives >= 1,
+    { firstDiscrepancies, firstAlternatives, endpointCalls });
+
+  // Repeat the exact worker report after C12 has already been marked unavailable.
+  s.say("VoiceStrike, B148 isn't at C12. The location is empty.", 'u-vs014-e2-2');
+  // Let the provider's autonomous turn close; code-owned delivery is tested separately.
+  s.reply({ text: 'Checking the inventory state.' });
+  await s.settle(220);
+
+  const secondDiscrepancies = endpointCalls.filter((entry) => entry.includes('/api/tools/report-inventory-discrepancy')).length;
+  const secondAlternatives = endpointCalls.filter((entry) => entry.includes('/api/tools/find-alternative-inventory')).length;
+  check('P28 VS-014 repeated E2 is idempotent: no second discrepancy mutation', secondDiscrepancies === 1, { firstDiscrepancies, secondDiscrepancies });
+  check('P28 VS-014 repeated E2 still refreshes authoritative alternative evidence', secondAlternatives >= firstAlternatives + 1, { firstAlternatives, secondAlternatives, endpointCalls });
+}
+
 check('HARNESS no exception inside the provider event pipeline', handlerErrors.length === 0, handlerErrors.slice(0, 3));
 globalThis.fetch = realFetch;
 console.error = realConsoleError;
