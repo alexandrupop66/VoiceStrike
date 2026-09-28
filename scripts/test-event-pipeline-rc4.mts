@@ -806,6 +806,26 @@ async function e2Ready(s: Session): Promise<void> {
   check('P28 VS-014 repeated E2 still refreshes authoritative alternative evidence', secondAlternatives >= firstAlternatives + 1, { firstAlternatives, secondAlternatives, endpointCalls });
 }
 
+// P29 / VS-014 — suppressed autonomous operational reply must close its initial boundary
+// so code can request exactly one verified CODE_CONTINUATION instead of becoming safely silent.
+{
+  const s = await freshSession();
+  s.say("VoiceStrike, B148 isn't at C12. The location is empty.", 'u-vs014-speech-1');
+  const audibleBefore = s.audible();
+  const replyCreateBefore = s.sentOfType('reply.create').length;
+
+  // Provider's autonomous answer is untrusted for operational speech in Single Owner mode.
+  s.reply({ text: 'I will handle that inventory report.' });
+  await s.settle(350);
+
+  check('P29 VS-014 autonomous operational reply is inaudible',
+    s.audible() === audibleBefore,
+    { audibleBefore, audibleAfter: s.audible() });
+  check('P29 VS-014 suppressed initial reply still enables one code-owned reply.create',
+    s.sentOfType('reply.create').length === replyCreateBefore + 1,
+    { before: replyCreateBefore, after: s.sentOfType('reply.create').length, sent: s.sentOfType('reply.create') });
+}
+
 check('HARNESS no exception inside the provider event pipeline', handlerErrors.length === 0, handlerErrors.slice(0, 3));
 globalThis.fetch = realFetch;
 console.error = realConsoleError;
