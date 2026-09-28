@@ -1396,6 +1396,37 @@ export class VoiceAgentClient {
       const shared = joined.result ?? await new Promise<PendingTool>((resolve) => joined.waiters.push(resolve));
       this.enqueueInternal(() => {
         this.replyAuthority.releaseCodeWork(joined.syntheticCallId);
+
+        // PREPARE is intentionally a local no-mutation outcome, not a tool failure. The provider
+        // must receive a positive conversational handoff ("prepared; ask for second turn") rather
+        // than the raw safety-gate refusal that some models narrate as "reversal failed".
+        if (joined.stage === 'PREPARE') {
+          const sharedRecord = shared.result && typeof shared.result === 'object'
+            ? shared.result as Record<string, unknown>
+            : {};
+          const preparedForProvider = {
+            ...sharedRecord,
+            ok: true,
+            status: 'PREPARED',
+            error: undefined,
+            reliability_outcome: 'NEEDS_CLARIFICATION',
+            verified: false,
+            verification_required: false,
+            mutation_attempted: false,
+            action_id: joined.actionId,
+            component_id: joined.componentId,
+            message: `Reversal prepared but not executed. Ask the worker to say exactly: "VoiceStrike, confirm reverse scan ${joined.componentId}".`,
+          };
+          this.sendProviderContextNote(this.codeOwnedFacts(joined));
+          return this.commitToolResult({
+            ...shared,
+            callId,
+            result: preparedForProvider,
+            isError: false,
+            completedAt: Date.now(),
+          });
+        }
+
         return this.commitToolResult({ ...shared, callId, completedAt: Date.now() });
       });
       return;
