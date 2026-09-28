@@ -401,7 +401,17 @@ export class ReplyAuthorityRegistry {
     const result: FinishedReply = Object.freeze({ ...finished, onsetDuringReplyAt: onset });
 
     const turn = this.openTurn;
-    if (!finished.authorised || !turn || finished.turnId !== turn.turnId) return result;
+    if (!turn || finished.turnId !== turn.turnId) return result;
+    // VS-014: an intentionally suppressed autonomous operational reply is still the provider's
+    // initial reply boundary. Mark that boundary done so the verified code-owned continuation can
+    // be requested; suppression affects audibility/authority, not lifecycle progress.
+    if (!finished.authorised) {
+      if (finished.reason === 'CODE_OWNED_INITIAL_REPLY') {
+        turn.initialReplyDone = true;
+        this.closeIfIdle(now, true);
+      }
+      return result;
+    }
     if (finished.reason === 'BOUND_TO_ACCEPTED_TURN') turn.initialReplyDone = true;
     if (finished.reason === 'BOUND_TO_ACCEPTED_TURN' || finished.reason === 'TOOL_CONTINUATION' || finished.reason === 'CODE_CONTINUATION') {
       this.closeIfIdle(now, true);
