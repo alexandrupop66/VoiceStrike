@@ -2112,6 +2112,89 @@ export class VoiceAgentClient {
    * tool.call: TurnAuthority, critical trust, workflow, CriticalConfirmationGate, single mutation
    * consumption, executeVerifiedAction and independent verification.
    */
+  private codeOwnedExpectedTool(entry: CodeOwnedAction): string {
+    if (entry.stage === 'E1') return 'check_component';
+    if (entry.stage === 'E2') return 'check_inventory';
+    if (entry.stage === 'E3_INSPECT') return 'inspect_last_action';
+    return 'reverse_last_scan';
+  }
+
+  private startCodeOwnedE1(turnId: string, commandId: string): void {
+    const key = `${turnId}|${commandId}`;
+    if (this.codeOwned.has(key)) return;
+    const command = this.commandRegistry.get(commandId);
+    if (!command || command.workflow !== 'E1_WRONG_COMPONENT' || command.status !== 'READY' || !command.slots.observedComponent) return;
+    const entry: CodeOwnedAction = {
+      key,
+      syntheticCallId: `code-e1-${turnId}`,
+      commandId,
+      turnId,
+      stage: 'E1',
+      actionId: `E1:${command.slots.observedComponent}`,
+      componentId: command.slots.observedComponent,
+      startedAt: Date.now(),
+      result: null,
+      waiters: [],
+      providerCallSeen: false,
+      deliveredVia: null,
+      initialReplyDoneAt: null,
+      deliveryAttempts: 0,
+    };
+    this.codeOwned.set(key, entry);
+    this.replyAuthority.holdCodeWork(commandId, entry.syntheticCallId);
+    emitReliabilityTelemetry({
+      event: 'reliability.code_owned_action_started',
+      sessionId: this.sessionId,
+      turnId,
+      commandId,
+      componentId: entry.componentId,
+      resultClass: 'E1',
+      detail: `code_call=${entry.syntheticCallId}; provider tools disabled`,
+    });
+    void this.handleToolCall(
+      { call_id: entry.syntheticCallId, name: 'check_component', arguments: { component_id: entry.componentId } },
+      { commandId, codeOwned: entry },
+    ).catch((error: unknown) => console.error('[VoiceStrike] code-owned E1 action failed', error));
+  }
+
+  private startCodeOwnedE3Inspect(turnId: string, commandId: string): void {
+    const key = `${turnId}|${commandId}`;
+    if (this.codeOwned.has(key)) return;
+    const command = this.commandRegistry.get(commandId);
+    if (!command || command.workflow !== 'E3_MISTAKEN_SCAN' || command.status !== 'READY' || command.phase !== 'VERIFY' || !command.slots.component) return;
+    const entry: CodeOwnedAction = {
+      key,
+      syntheticCallId: `code-e3-inspect-${turnId}`,
+      commandId,
+      turnId,
+      stage: 'E3_INSPECT',
+      actionId: 'E3:INSPECT',
+      componentId: command.slots.component,
+      startedAt: Date.now(),
+      result: null,
+      waiters: [],
+      providerCallSeen: false,
+      deliveredVia: null,
+      initialReplyDoneAt: null,
+      deliveryAttempts: 0,
+    };
+    this.codeOwned.set(key, entry);
+    this.replyAuthority.holdCodeWork(commandId, entry.syntheticCallId);
+    emitReliabilityTelemetry({
+      event: 'reliability.code_owned_action_started',
+      sessionId: this.sessionId,
+      turnId,
+      commandId,
+      componentId: entry.componentId,
+      resultClass: 'E3_INSPECT',
+      detail: `code_call=${entry.syntheticCallId}; provider tools disabled`,
+    });
+    void this.handleToolCall(
+      { call_id: entry.syntheticCallId, name: 'inspect_last_action', arguments: {} },
+      { commandId, codeOwned: entry },
+    ).catch((error: unknown) => console.error('[VoiceStrike] code-owned E3 inspect failed', error));
+  }
+
   private startCodeOwnedE2(turnId: string, commandId: string): void {
     const key = `${turnId}|${commandId}`;
     if (this.codeOwned.has(key)) return;
