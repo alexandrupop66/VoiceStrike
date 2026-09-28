@@ -1,0 +1,49 @@
+name: Package VoiceStrike VS-013 Runtime
+
+on:
+  push:
+    branches:
+      - package/VS-013-runtime-download-20260928
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout packaging branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build exact VS-013 runtime package
+        shell: bash
+        run: |
+          set -euo pipefail
+          COMMIT="b6cbc7463c1c576ff29e0f4ec622877ab75bad53"
+          ROOT="VoiceStrike_VS013_Runtime"
+          ZIP="VoiceStrike_VS013_Runtime_b6cbc74.zip"
+
+          rm -rf package "$ZIP" "$ZIP.sha256"
+          mkdir -p "package/$ROOT"
+          git archive --format=tar "$COMMIT" | tar -x -C "package/$ROOT"
+          rm -f "package/$ROOT/.env"
+          rm -rf "package/$ROOT/node_modules" "package/$ROOT/.test-dist"
+
+          (
+            cd package
+            zip -qr "../$ZIP" "$ROOT"
+          )
+          sha256sum "$ZIP" > "$ZIP.sha256"
+
+      - name: Upload runtime package
+        uses: actions/upload-artifact@v4
+        with:
+          name: VoiceStrike_VS013_Runtime_b6cbc74
+          path: |
+            VoiceStrike_VS013_Runtime_b6cbc74.zip
+            VoiceStrike_VS013_Runtime_b6cbc74.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
